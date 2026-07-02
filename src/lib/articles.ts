@@ -21,7 +21,7 @@ export interface ArticleInput {
 }
 
 async function uniqueSlug(base: string, excludeId?: string) {
-  let candidate = slugify(base) || "artigo";
+  const candidate = slugify(base) || "artigo";
   let suffix = 0;
 
   while (true) {

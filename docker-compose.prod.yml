@@ -72,14 +72,6 @@ services:
     networks:
       - sobrapsi-internal
       - easypanel
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=easypanel
-      - traefik.http.routers.sobrapsi.rule=Host(`sobrapsi.org.br`) || Host(`www.sobrapsi.org.br`)
-      - traefik.http.routers.sobrapsi.entrypoints=websecure
-      - traefik.http.routers.sobrapsi.tls=true
-      - traefik.http.routers.sobrapsi.tls.certresolver=letsencrypt
-      - traefik.http.services.sobrapsi.loadbalancer.server.port=3000
 
 networks:
   sobrapsi-internal:

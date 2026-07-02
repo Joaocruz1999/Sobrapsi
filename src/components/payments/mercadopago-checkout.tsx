@@ -113,7 +113,7 @@ export function MercadoPagoCheckout({
   );
 
   const brickContainerId =
-    selectedMethod != null ? `paymentBrick_${paymentId}_${selectedMethod}` : null;
+    selectedMethod != null ? `paymentBrick_${paymentId}_${selectedMethod}` : undefined;
 
   const handleBrickReady = useCallback(() => {
     if (!brickContainerId) return;
