@@ -1,6 +1,9 @@
 # Traefik File Provider — EasyPanel (entryPoints: http, https).
 # Nao inclua comentarios com chaves duplas neste arquivo (Go template).
-# Nao adicione redirect HTTP->HTTPS aqui: quebra o desafio ACME na porta 80.
+#
+# O modo manutencao agora e feito na aplicacao (MAINTENANCE_MODE no .env),
+# com pagina amigavel em /manutencao e acesso via /?acesso=SEGREDO.
+# Por isso este arquivo faz apenas o roteamento HTTPS simples.
 
 http:
   routers:
