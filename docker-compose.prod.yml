@@ -1,0 +1,92 @@
+# Produção na VPS com EasyPanel (Traefik na rede externa "easypanel").
+# Não publica portas 80/443 nem 3000 no host — o Traefik faz o roteamento HTTPS.
+#
+# Uso:
+#   cp .env.production.example .env
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Se as labels não forem detectadas (Traefik em Swarm), use o fallback em
+# deploy/easypanel/traefik-sobrapsi.yml
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sobrapsi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sobrapsi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-sobrapsi}
+    volumes:
+      - sobrapsi_pgdata:/var/lib/postgresql/data
+    networks:
+      - sobrapsi-internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-sobrapsi} -d ${POSTGRES_DB:-sobrapsi}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Serviço efêmero para migrations/seed — usa o estágio "builder" que contém
+  # o CLI do Prisma e o tsx (ausentes na imagem final standalone).
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: sobrapsi-migrate
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sobrapsi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sobrapsi}?schema=public
+    command: npx prisma migrate deploy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sobrapsi-internal
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sobrapsi-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sobrapsi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sobrapsi}?schema=public
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      - sobrapsi_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sobrapsi-internal
+      - easypanel
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=easypanel
+      - traefik.http.routers.sobrapsi.rule=Host(`sobrapsi.org.br`) || Host(`www.sobrapsi.org.br`)
+      - traefik.http.routers.sobrapsi.entrypoints=websecure
+      - traefik.http.routers.sobrapsi.tls=true
+      - traefik.http.routers.sobrapsi.tls.certresolver=letsencrypt
+      - traefik.http.services.sobrapsi.loadbalancer.server.port=3000
+
+networks:
+  sobrapsi-internal:
+    driver: bridge
+  easypanel:
+    external: true
+
+volumes:
+  sobrapsi_pgdata:
+  sobrapsi_uploads:

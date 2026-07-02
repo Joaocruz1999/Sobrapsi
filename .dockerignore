@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.production.example
+uploads
+*.md
+deploy/nginx
+deploy/ecosystem.config.cjs
+deploy/scripts/setup-vps.sh
+Dockerfile
+docker-compose*.yml
+.cursor

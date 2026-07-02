@@ -1,0 +1,27 @@
+# Roteamento via File Provider do Traefik do EasyPanel (recomendado em Swarm).
+# No seu servidor, o Traefik roda como serviço Swarm — labels de compose comum
+# costumam NÃO ser descobertas. Use este arquivo como método principal.
+#
+# 1. Suba os containers (deploy-docker.sh ou compose up)
+# 2. Confirme que sobrapsi-app está na rede easypanel:
+#    docker inspect sobrapsi-app --format '{{json .NetworkSettings.Networks}}'
+# 3. Copie este arquivo:
+#    sudo cp deploy/easypanel/traefik-sobrapsi.yml /etc/easypanel/traefik/config/sobrapsi.yml
+#
+# EntryPoints/certResolver confirmados na sua VPS: websecure + letsencrypt
+
+http:
+  routers:
+    sobrapsi:
+      rule: Host(`sobrapsi.org.br`) || Host(`www.sobrapsi.org.br`)
+      entryPoints:
+        - websecure
+      service: sobrapsi
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    sobrapsi:
+      loadBalancer:
+        servers:
+          - url: http://sobrapsi-app:3000
