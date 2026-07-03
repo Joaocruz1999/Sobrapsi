@@ -472,7 +472,7 @@ export function CandidaturaWizard() {
                   <div className="space-y-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
                     <p>{cpfGate.message}</p>
                     <Button asChild variant="outline" className="w-full">
-                      <Link href="/login">Acessar área do associado</Link>
+                      <Link href="/app/login">Acessar área do associado</Link>
                     </Button>
                   </div>
                 )}
