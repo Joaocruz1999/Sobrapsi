@@ -12,10 +12,17 @@ import {
   isStaffRole,
 } from "@/lib/staff-permissions";
 
+export function getAdminSecret(): string {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) {
+    throw new Error("ADMIN_SECRET não configurado");
+  }
+  return secret;
+}
+
 export function verifyAdminRequest(request: NextRequest) {
   const auth = request.headers.get("authorization");
-  const adminSecret = process.env.ADMIN_SECRET ?? "change-me-in-production";
-  return auth === `Bearer ${adminSecret}`;
+  return auth === `Bearer ${getAdminSecret()}`;
 }
 
 export async function getStaffSession(): Promise<SessionPayload | null> {

@@ -127,7 +127,12 @@ async function main() {
   });
   console.log(`Created/updated member: ${member.fullName} (${user.email})`);
 
-  const adminPassword = process.env.ADMIN_SEED_PASSWORD ?? "Admin@SOBRAPSI2026";
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      "ADMIN_SEED_PASSWORD não configurado. Defina no .env antes de rodar o seed."
+    );
+  }
   const adminHash = await bcrypt.hash(adminPassword, 12);
   await prisma.user.upsert({
     where: { email: "admin@sobrapsi.org.br" },
