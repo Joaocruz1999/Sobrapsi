@@ -34,12 +34,14 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
     const [dragging, setDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
     const imageRef = useRef<HTMLImageElement | null>(null);
+    const userPickedPhotoRef = useRef(false);
 
     useEffect(() => {
       setImageSrc(currentPhotoUrl ?? null);
       setDimensions({ width: 0, height: 0 });
       setUserZoom(1);
       setOffset({ x: 0, y: 0 });
+      userPickedPhotoRef.current = false;
     }, [currentPhotoUrl]);
 
     const previewCoverScale = useMemo(() => {
@@ -60,7 +62,8 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
     }, [dimensions]);
 
     const exportCropped = useCallback(async (): Promise<File | null> => {
-      if (!imageRef.current || !imageSrc || !dimensions.width) return null;
+      const img = imageRef.current;
+      if (!img || !imageSrc || !img.naturalWidth) return null;
 
       const canvas = document.createElement("canvas");
       canvas.width = OUTPUT_SIZE;
@@ -68,7 +71,6 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
 
-      const img = imageRef.current;
       const coverScale = getCoverScale(img.naturalWidth, img.naturalHeight, OUTPUT_SIZE);
       const finalScale = coverScale * userZoom;
       const w = img.naturalWidth * finalScale;
@@ -98,19 +100,29 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
           0.85
         );
       });
-    }, [imageSrc, dimensions.width, userZoom, offset]);
+    }, [imageSrc, userZoom, offset]);
 
     useImperativeHandle(ref, () => ({ getCroppedFile: exportCropped }), [exportCropped]);
+
+    const publishCroppedPreview = useCallback(async () => {
+      if (!userPickedPhotoRef.current) return;
+      const file = await exportCropped();
+      onPhotoReady(file);
+    }, [exportCropped, onPhotoReady]);
 
     function handleImageLoad(img: HTMLImageElement) {
       imageRef.current = img;
       setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
       setUserZoom(1);
       setOffset({ x: 0, y: 0 });
+      if (userPickedPhotoRef.current) {
+        void publishCroppedPreview();
+      }
     }
 
     async function handleFileChange(file: File | null) {
       if (!file) return;
+      userPickedPhotoRef.current = true;
       const url = URL.createObjectURL(file);
       setImageSrc(url);
       setDimensions({ width: 0, height: 0 });
@@ -118,11 +130,6 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
       setOffset({ x: 0, y: 0 });
       onPhotoReady(null);
       onPhotoSelected?.();
-    }
-
-    async function handleApply() {
-      const file = await exportCropped();
-      onPhotoReady(file);
     }
 
     function onPointerDown(e: React.PointerEvent) {
@@ -149,6 +156,14 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
       setDragging(false);
     }
 
+    useEffect(() => {
+      if (!userPickedPhotoRef.current || !imageSrc || !dimensions.width) return;
+      const timer = window.setTimeout(() => {
+        void publishCroppedPreview();
+      }, 150);
+      return () => window.clearTimeout(timer);
+    }, [imageSrc, dimensions.width, userZoom, offset.x, offset.y, publishCroppedPreview]);
+
     const displayScale = previewCoverScale * userZoom;
 
     return (
@@ -156,7 +171,7 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
         <div>
           <Label className="text-white">Foto de perfil público</Label>
           <p className="mt-1 text-xs text-muted">
-            Opcional. Ajuste o enquadramento como na foto de perfil do WhatsApp — arraste e use o zoom.
+            Opcional. Você pode salvar sem ajustar — arraste ou use o zoom apenas se quiser refinar o enquadramento.
           </p>
         </div>
 
@@ -217,13 +232,6 @@ export const ProfilePhotoCropper = forwardRef<ProfilePhotoCropperRef, ProfilePho
                     className="w-full accent-primary"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={handleApply}
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Aplicar enquadramento
-                </button>
               </>
             )}
           </div>

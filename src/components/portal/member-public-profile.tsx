@@ -187,6 +187,14 @@ export function MemberPublicProfileEditor({
   const [newPhotoSelected, setNewPhotoSelected] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  function showError(message: string) {
+    setError(message);
+    requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -202,6 +210,12 @@ export function MemberPublicProfileEditor({
         photoFile = (await cropperRef.current?.getCroppedFile()) ?? null;
       }
 
+      if (newPhotoSelected && !photoFile) {
+        showError("A foto ainda está carregando. Aguarde um instante e tente salvar novamente.");
+        setSaving(false);
+        return;
+      }
+
       if (photoFile) {
         const uploadData = new FormData();
         uploadData.append("file", photoFile);
@@ -213,7 +227,7 @@ export function MemberPublicProfileEditor({
         const uploadJson = await uploadRes.json();
 
         if (!uploadRes.ok) {
-          setError(uploadJson.error ?? "Erro ao enviar foto");
+          showError(uploadJson.error ?? "Erro ao enviar foto");
           setSaving(false);
           return;
         }
@@ -226,24 +240,37 @@ export function MemberPublicProfileEditor({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          publicPhotoUrl,
+          publicName: form.publicName,
+          publicCity: form.publicCity,
+          publicState: form.publicState,
+          publicBio: form.publicBio,
+          publicEducationSummary: form.publicEducationSummary,
+          publicStudyAreas: form.publicStudyAreas,
+          publicWebsite: form.publicWebsite,
+          publicLinkedin: form.publicLinkedin,
+          publicInstagram: form.publicInstagram,
+          publicPhotoUrl: publicPhotoUrl || undefined,
+          authorizeList: form.authorizeList,
+          authorizeBio: form.authorizeBio,
+          authorizeLinks: form.authorizeLinks,
+          authorizePhoto: form.authorizePhoto,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Erro ao salvar perfil");
+        showError(data.error ?? "Erro ao salvar perfil");
         setSaving(false);
         return;
       }
 
+      setSaving(false);
       onSaved({
         ...data.profile,
         photoUrl: data.profile.photoUrl ?? photoUrl,
       });
     } catch {
-      setError("Erro ao salvar perfil");
+      showError("Erro ao salvar perfil");
       setSaving(false);
     }
   }
@@ -273,8 +300,8 @@ export function MemberPublicProfileEditor({
             onPhotoSelected={() => setNewPhotoSelected(true)}
           />
           {newPhotoSelected && !pendingPhoto && (
-            <p className="text-xs text-amber-300/90">
-              Nova foto selecionada. Ao salvar, o enquadramento atual será aplicado automaticamente.
+            <p className="text-xs text-muted">
+              Preparando a foto para envio...
             </p>
           )}
 
@@ -405,11 +432,22 @@ export function MemberPublicProfileEditor({
             </label>
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && (
+            <p ref={errorRef} className="text-sm text-red-400">
+              {error}
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar perfil público"}
+            <Button
+              type="submit"
+              disabled={saving || (newPhotoSelected && !pendingPhoto)}
+            >
+              {saving
+                ? "Salvando..."
+                : newPhotoSelected && !pendingPhoto
+                  ? "Preparando foto..."
+                  : "Salvar perfil público"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
               Cancelar

@@ -97,7 +97,7 @@ export const curriculumSchema = z.object({
 export const publicProfileSchema = z.object({
   publicName: z.string().min(3),
   publicCity: z.string().optional(),
-  publicState: z.string().length(2).optional(),
+  publicState: z.union([z.string().length(2), z.literal("")]).optional(),
   publicBio: z.string().max(600).optional(),
   publicEducationSummary: z.string().optional(),
   publicStudyAreas: z.string().optional(),
