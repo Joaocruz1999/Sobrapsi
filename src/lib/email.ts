@@ -1,33 +1,57 @@
+import nodemailer, { type Transporter } from "nodemailer";
+
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
 }
 
-export async function sendEmail({ to, subject, html }: EmailOptions) {
-  const resendKey = process.env.RESEND_API_KEY;
+const DEFAULT_FROM = "SOBRAPSI <noreply@sobrapsi.org.br>";
 
-  if (resendKey) {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "SOBRAPSI <noreply@sobrapsi.org.br>",
-        to: [to],
-        subject,
-        html,
-      }),
-    });
-    if (!res.ok) {
-      console.error("Resend error:", await res.text());
-    }
+let cachedTransporter: Transporter | null = null;
+
+function getTransporter(): Transporter | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  if (cachedTransporter) {
+    return cachedTransporter;
+  }
+
+  const port = Number(process.env.SMTP_PORT ?? 465);
+  const secure = process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === "true"
+    : port === 465;
+
+  cachedTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+
+  return cachedTransporter;
+}
+
+export async function sendEmail({ to, subject, html }: EmailOptions) {
+  const transporter = getTransporter();
+  const from = process.env.EMAIL_FROM ?? DEFAULT_FROM;
+
+  if (!transporter) {
+    console.log(`[EMAIL] To: ${to} | Subject: ${subject} (SMTP não configurado)`);
     return;
   }
 
-  console.log(`[EMAIL] To: ${to} | Subject: ${subject}`);
+  try {
+    await transporter.sendMail({ from, to, subject, html });
+  } catch (error) {
+    console.error("SMTP error:", error);
+  }
 }
 
 export async function sendAccountActivationEmail(
