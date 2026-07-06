@@ -26,6 +26,7 @@ export function SiteLogo({
       height={LOGO_HEIGHT}
       className={cn("w-auto object-contain", imageClassName)}
       priority={priority}
+      unoptimized
     />
   );
 
