@@ -37,7 +37,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-xl">
       <div className={SITE_SHELL}>
         <div className="flex h-20 items-center justify-between">
-        <SiteLogo href="/" imageClassName="h-11 w-auto sm:h-12" priority />
+        <SiteLogo href="/" imageClassName="h-11 w-auto sm:h-12" />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {MAIN_NAV.map((item) => {

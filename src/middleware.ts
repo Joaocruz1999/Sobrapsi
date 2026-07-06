@@ -14,10 +14,18 @@ const MAINTENANCE_FLAG_KEY = "MAINTENANCE_MODE";
 const MAINTENANCE_SECRET_KEY = "MAINTENANCE_SECRET";
 const BYPASS_COOKIE = "sobrapsi_bypass";
 
+function isPublicStaticAsset(pathname: string) {
+  return (
+    pathname === "/logo-sobrapsi.png" ||
+    /\.(png|jpe?g|gif|webp|svg|ico)$/i.test(pathname)
+  );
+}
+
 function handleMaintenance(request: NextRequest): NextResponse | null {
   if (process.env[MAINTENANCE_FLAG_KEY] !== "true") return null;
 
   const { pathname, searchParams } = request.nextUrl;
+  if (isPublicStaticAsset(pathname)) return null;
   const secret = process.env[MAINTENANCE_SECRET_KEY];
 
   // Concede o acesso via link secreto e grava cookie de bypass.
@@ -81,5 +89,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|logo-sobrapsi\\.png|.*\\.(?:png|jpe?g|gif|webp|svg|ico)$).*)",
+  ],
 };
