@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { MAIN_NAV } from "@/lib/constants";
 import { SITE_SHELL } from "@/lib/layout";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { cn } from "@/lib/utils";
 
 function isNavActive(pathname: string, href: string) {
@@ -36,17 +37,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-xl">
       <div className={SITE_SHELL}>
         <div className="flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-            SB
-          </div>
-          <div className="hidden sm:block">
-            <p className="text-sm font-bold tracking-wide text-white">SOBRAPSI</p>
-            <p className="text-[10px] uppercase tracking-widest text-muted">
-              Sociedade Brasileira de Psicanálise
-            </p>
-          </div>
-        </Link>
+        <SiteLogo href="/" imageClassName="h-11 w-auto sm:h-12" priority />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {MAIN_NAV.map((item) => {

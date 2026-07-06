@@ -1,3 +1,5 @@
+import { SiteLogo } from "@/components/layout/site-logo";
+
 export const metadata = {
   title: "Em breve — SOBRAPSI",
   description: "Estamos preparando novidades. Volte em breve.",
@@ -8,13 +10,7 @@ export default function ManutencaoPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-black px-6 py-16">
       <div className="w-full max-w-xl text-center">
-        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white">
-          SB
-        </div>
-
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-primary">
-          Sociedade Brasileira de Psicanálise
-        </p>
+        <SiteLogo href={null} imageClassName="mx-auto mb-8 h-24 w-auto sm:h-28" />
 
         <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl">
           Estamos preparando algo novo

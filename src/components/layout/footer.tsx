@@ -2,6 +2,7 @@ import { Instagram, Mail } from "lucide-react";
 import Link from "next/link";
 import { INSTITUTIONAL_DISCLAIMER, NAV_ITEMS, SOBRAPSI_CNPJ } from "@/lib/constants";
 import { SITE_SHELL } from "@/lib/layout";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { cn } from "@/lib/utils";
 
 export function Footer() {
@@ -10,10 +11,7 @@ export function Footer() {
       <div className={cn(SITE_SHELL, "py-12 lg:py-14")}>
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-lg font-bold">
-              SB
-            </div>
-            <p className="mb-2 text-lg font-bold">SOBRAPSI</p>
+            <SiteLogo href="/" imageClassName="mb-4 h-16 w-auto" />
             <p className="text-sm leading-relaxed text-muted">
               Sociedade Brasileira de Psicanálise — dedicação à formação
               continuada, ética e supervisão.
