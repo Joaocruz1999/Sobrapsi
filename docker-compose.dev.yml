@@ -1,0 +1,72 @@
+# Stack de DESENVOLVIMENTO com hot reload.
+# Banco isolado (sobrapsi-dev-db) — não toca no banco de produção.
+# App sobe na porta 3001 (host) com `next dev` e source montado.
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   # rodar migrations/seed uma vez:
+#   docker compose -f docker-compose.dev.yml run --rm app-dev npx prisma migrate deploy
+#   docker compose -f docker-compose.dev.yml run --rm app-dev npm run db:seed
+#   # acessar via tunnel SSH:  ssh -L 3001:127.0.0.1:3001 usuario@servidor
+#   # então abra http://localhost:3001 no navegador
+#
+# Logs em tempo real:
+#   docker compose -f docker-compose.dev.yml logs -f app-dev
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: sobrapsi-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sobrapsi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sobrapsi}
+      POSTGRES_DB: ${POSTGRES_DB:-sobrapsi}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - sobrapsi_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-sobrapsi} -d ${POSTGRES_DB:-sobrapsi}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app-dev:
+    image: node:22-alpine
+    container_name: sobrapsi-dev
+    working_dir: /app
+    env_file:
+      - .env.dev
+    environment:
+      # Garante o DB de dev mesmo que .env.dev seja editado errado.
+      DATABASE_URL: postgresql://sobrapsi:sobrapsi@postgres-dev:5432/sobrapsi?schema=public
+      NODE_ENV: development
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      # Source montado => hot reload reflete edições em /opt/sobrapsi
+      - ./:/app
+      # node_modules e .next em volumes nomeados para persistir entre restarts
+      - sobrapsi_dev_node_modules:/app/node_modules
+      - sobrapsi_dev_next:/app/.next
+      - sobrapsi_dev_uploads:/app/uploads
+    command: >
+      sh -c "[ -d node_modules/.bin ] || npm ci --ignore-scripts;
+      npx prisma generate;
+      npx prisma migrate deploy;
+      npx next dev -H 0.0.0.0 -p 3000"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+
+volumes:
+  sobrapsi_dev_pgdata:
+  sobrapsi_dev_node_modules:
+  sobrapsi_dev_next:
+  sobrapsi_dev_uploads:
