@@ -62,7 +62,7 @@ export default function HomePage() {
             Sociedade Brasileira de Psicanálise
           </p>
           <h1 className="max-w-4xl text-3xl font-bold leading-[1.15] tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Uma sociedade psicanalítica mais do que dedicada à formação, ética e supervisão
+            Uma sociedade psicanalítica dedicada à formação, ética e supervisão
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
             A SOBRAPSI reúne psicanalistas, estudantes e instituições
