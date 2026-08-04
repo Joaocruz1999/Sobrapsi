@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/admin-auth";
+import { getStaffSession } from "@/lib/admin-auth";
 import { getSession } from "@/lib/auth";
 import { getCandidateSession } from "@/lib/candidate-auth";
 import { getMemberUploadStorageKeys } from "@/lib/member-photo";
@@ -27,7 +27,7 @@ export async function GET(
     const storageKey = segments[1];
     const userSession = await getSession();
     const candidateSession = await getCandidateSession();
-    const isAdmin = verifyAdminRequest(request);
+    const staffSession = await getStaffSession();
 
     let memberStorageKeys: string[] = [];
     if (userSession?.userId) {
@@ -35,7 +35,7 @@ export async function GET(
     }
 
     const authorized =
-      isAdmin ||
+      Boolean(staffSession) ||
       (userSession?.userId && memberStorageKeys.includes(storageKey)) ||
       (candidateSession?.applicationId && storageKey === candidateSession.applicationId);
 

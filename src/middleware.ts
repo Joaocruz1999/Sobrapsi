@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/session";
+import { isStaffRole } from "@/lib/staff-permissions";
 
 const PUBLIC_APP_PATHS = [
   "/app/login",
@@ -8,6 +9,8 @@ const PUBLIC_APP_PATHS = [
   "/app/ativar-conta",
   "/app/alterar-senha",
 ];
+
+const PUBLIC_ADMIN_PATHS = ["/admin/login"];
 
 // Chaves acessadas dinamicamente para evitar inlining em build (lidas em runtime).
 const MAINTENANCE_FLAG_KEY = "MAINTENANCE_MODE";
@@ -82,6 +85,23 @@ export async function middleware(request: NextRequest) {
 
     if (session.mustChangePassword && pathname !== "/app/alterar-senha") {
       return NextResponse.redirect(new URL("/app/alterar-senha", request.url));
+    }
+  }
+
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    if (PUBLIC_ADMIN_PATHS.includes(pathname)) {
+      return NextResponse.next();
+    }
+
+    const token = request.cookies.get("sobrapsi_session")?.value;
+    const redirectUrl = new URL("/admin/login", request.url);
+    if (!token) {
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const session = await verifySessionToken(token);
+    if (!session || !isStaffRole(session.role)) {
+      return NextResponse.redirect(redirectUrl);
     }
   }
 

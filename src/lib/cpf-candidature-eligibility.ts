@@ -2,10 +2,10 @@ import "server-only";
 
 import {
   APPLICATION_STATUS_LABELS,
-  cpfMatches,
   hasPersistableDraftContact,
   normalizeCpf,
 } from "@/lib/application-shared";
+import { hashCpf } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
@@ -51,6 +51,8 @@ export async function findApplicationsByCpf(cpf: string): Promise<ApplicationSum
   const normalized = normalizeCpf(cpf);
   if (normalized.length !== 11) return [];
 
+  const cpfHash = hashCpf(normalized);
+
   const applications = await prisma.application.findMany({
     select: {
       id: true,
@@ -59,20 +61,20 @@ export async function findApplicationsByCpf(cpf: string): Promise<ApplicationSum
       updatedAt: true,
       candidate: {
         select: {
-          cpfEncrypted: true,
+          cpfHash: true,
           email: true,
           phone: true,
         },
       },
-      user: { select: { person: { select: { cpfEncrypted: true } } } },
+      user: { select: { person: { select: { cpfHash: true } } } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
   const matched = applications.filter((app) => {
     const stored =
-      app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted ?? null;
-    return cpfMatches(stored, normalized);
+      app.candidate?.cpfHash ?? app.user?.person?.cpfHash ?? null;
+    return stored === cpfHash;
   });
 
   const persistable: ApplicationSummary[] = [];

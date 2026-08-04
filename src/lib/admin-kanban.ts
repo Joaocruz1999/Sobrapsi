@@ -4,11 +4,16 @@ export type KanbanColumn = {
   matchStatuses: string[];
 };
 
+// Colunas visíveis no funil. "Recebida" absorve os estágios intermediários
+// (submitted / in_review / complemented) que deixaram de ser colunas próprias.
+// "Aprovado" e "Reprovado" deixaram de ser colunas — viraram botões de ação.
 export const ADMIN_KANBAN_COLUMNS: KanbanColumn[] = [
   { status: "draft", label: "Rascunho", matchStatuses: ["draft"] },
-  { status: "submitted", label: "Enviada", matchStatuses: ["submitted"] },
-  { status: "awaiting_review", label: "Recebida", matchStatuses: ["awaiting_review"] },
-  { status: "in_review", label: "Em verificação", matchStatuses: ["in_review", "complemented"] },
+  {
+    status: "awaiting_review",
+    label: "Recebida",
+    matchStatuses: ["submitted", "awaiting_review", "in_review", "complemented"],
+  },
   {
     status: "awaiting_complement",
     label: "Aguardando informações",
@@ -19,11 +24,19 @@ export const ADMIN_KANBAN_COLUMNS: KanbanColumn[] = [
     label: "Aguardando pagamento",
     matchStatuses: ["approved_pending_payment"],
   },
-  { status: "approved", label: "Aprovado", matchStatuses: ["approved"] },
-  { status: "rejected", label: "Reprovada", matchStatuses: ["rejected"] },
 ];
 
-export const ADMIN_UPDATABLE_STATUSES = ADMIN_KANBAN_COLUMNS.map((c) => c.status);
+// Status que a secretaria pode definir manualmente via update_status.
+// Inclui approved/rejected (acionados pelos botões de arrastar) mesmo que
+// não sejam colunas visíveis.
+export const ADMIN_UPDATABLE_STATUSES = [
+  "draft",
+  "awaiting_review",
+  "awaiting_complement",
+  "approved_pending_payment",
+  "approved",
+  "rejected",
+];
 
 export function kanbanColumnForStatus(status: string): KanbanColumn {
   return (
@@ -38,3 +51,6 @@ export function appsInColumn<T extends { status: string }>(
 ): T[] {
   return applications.filter((app) => column.matchStatuses.includes(app.status));
 }
+
+// Limite de horas sem pagamento para destacar o card em vermelho.
+export const PAYMENT_OVERDUE_HOURS = 48;

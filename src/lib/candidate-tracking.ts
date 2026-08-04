@@ -3,12 +3,12 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import {
   birthYearMatches,
-  cpfMatches,
   getCandidateStatusLabel,
   getTrackingStepStates,
   normalizeCpf,
   resolveCandidateTrackingStep,
 } from "@/lib/application-shared";
+import { hashCpf } from "@/lib/crypto";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
@@ -17,6 +17,8 @@ export async function findApplicationByCpfAndBirthYear(cpf: string, birthYear: n
   if (normalized.length !== 11 || !Number.isInteger(birthYear)) {
     return null;
   }
+
+  const cpfHash = hashCpf(normalized);
 
   const applications = await prisma.application.findMany({
     where: {
@@ -43,11 +45,11 @@ export async function findApplicationByCpfAndBirthYear(cpf: string, birthYear: n
 
   return (
     applications.find((app) => {
-      const storedCpf =
-        app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted ?? null;
+      const storedHash =
+        app.candidate?.cpfHash ?? app.user?.person?.cpfHash ?? null;
       const birthDate =
         app.candidate?.birthDate ?? app.user?.person?.birthDate ?? null;
-      return cpfMatches(storedCpf, normalized) && birthYearMatches(birthDate, birthYear);
+      return storedHash === cpfHash && birthYearMatches(birthDate, birthYear);
     }) ?? null
   );
 }
@@ -90,7 +92,7 @@ export function buildTrackingView(application: NonNullable<Awaited<ReturnType<ty
     payment: applicationPayment
       ? {
           id: applicationPayment.id,
-          amount: applicationPayment.amount,
+          amount: Number(applicationPayment.amount),
           status: applicationPayment.status,
           dueDate: formatDate(applicationPayment.dueDate),
         }

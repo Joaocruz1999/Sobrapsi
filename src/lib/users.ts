@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { normalizeCpf, normalizeBirthDatePasswordInput } from "@/lib/application-shared";
+import { normalizeBirthDatePasswordInput, normalizeCpf } from "@/lib/application-shared";
+import { hashCpf } from "@/lib/crypto";
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -32,8 +33,9 @@ export async function getUserByCpf(cpf: string) {
   const normalized = normalizeCpf(cpf);
   if (normalized.length !== 11) return null;
 
+  const cpfHash = hashCpf(normalized);
   const person = await prisma.person.findFirst({
-    where: { cpfEncrypted: normalized },
+    where: { cpfHash },
     include: {
       user: {
         include: { person: true, member: true },

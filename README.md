@@ -7,7 +7,7 @@ Plataforma institucional + portal de candidatura + cadastro privado + diretório
 - **Next.js 15** (App Router) + TypeScript
 - **Tailwind CSS 4** + componentes estilo shadcn/ui
 - **Prisma** + **PostgreSQL** (Docker na VPS)
-- **Nginx** + **PM2** (produção) + **Resend** (e-mails transacionais)
+- **Nginx** + **PM2** (produção) + **Nodemailer via SMTP Hostinger** (e-mails transacionais)
 
 ## Início rápido (desenvolvimento)
 
@@ -33,8 +33,8 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ### Admin
 
-- URL: `/admin`
-- Senha padrão (dev): valor de `ADMIN_SECRET` no `.env` (`change-me-in-production`)
+- URL: `/admin` (protegido por sessão da equipe; o middleware redireciona para o login embutido na própria página)
+- Login (dev): `admin@sobrapsi.org.br` + valor de `ADMIN_SEED_PASSWORD` no `.env` (criado pelo `npm run db:seed`)
 
 ### Consulta de associados (demo)
 
@@ -96,11 +96,12 @@ npm run deploy
 |----------|-----------|
 | `DATABASE_URL` | PostgreSQL local (`127.0.0.1:5432`) |
 | `SESSION_SECRET` | Segredo de sessão (32+ bytes) |
-| `ENCRYPTION_KEY` | Chave hex 32 bytes para CPF/RG |
-| `ADMIN_SECRET` | Senha do painel admin |
-| `CRON_SECRET` | Token do endpoint `/api/cron/membership` |
+| `ENCRYPTION_KEY` | Chave hex 32 bytes para criptografar CPF/RG (AES-256-GCM). **Obrigatória em produção** — sem ela o app recusa gravar/ler CPF/RG. |
+| `ADMIN_SEED_PASSWORD` | Senha inicial do usuário staff `admin@sobrapsi.org.br` (usada apenas no `npm run db:seed`) |
+| `CRON_SECRET` | Token do endpoint `/api/cron/membership` (obrigatório; não cai mais para `ADMIN_SECRET`) |
 | `ALLOW_SIMULATED_PAYMENTS` | `false` em produção |
 | `NEXT_PUBLIC_APP_URL` | URL pública com HTTPS |
+| `MP_WEBHOOK_SECRET` | Segredo compartilhado pelo Mercado Pago para validar a assinatura do webhook (HMAC `x-signature`). Se não configurado, o webhook rejeita todas as notificações. |
 
 ## Funcionalidades
 
@@ -117,7 +118,7 @@ npm run deploy
 - **Renovação de anuidade** — fluxo de pagamento + extensão de validade
 - **Painel admin de pagamentos** — confirmar Pix/manual
 - **Status automático** — vencendo/vencido via cron (`/api/cron/membership`)
-- **E-mails transacionais e lembretes** — via Resend (ou log no console em dev)
+- **E-mails transacionais e lembretes** — via Nodemailer/SMTP (Hostinger em produção; em dev, sem SMTP configurado, os e-mails só aparecem no console do container)
 
 ## Estrutura de rotas
 
@@ -143,11 +144,18 @@ Campos públicos máximos: nome, registro, categoria, UF (com consentimento), st
 
 **Nunca públicos:** CPF, RG, endereço, telefone, e-mail pessoal, documentos, pareceres internos.
 
+### Criptografia de PII
+
+CPF e RG são criptografados em repouso com AES-256-GCM usando `ENCRYPTION_KEY` (32 bytes hex). O lookup por CPF usa uma coluna derivada `cpf_hash` (HMAC-SHA256 da chave + CPF normalizado), que permite buscar sem descriptografar toda a tabela. Em produção, **nunca deixe `ENCRYPTION_KEY` vazia** e **nunca a troque** sem um script de re-criptografia dos dados existentes (a rotação exige descriptografar com a chave antiga e regravar com a nova).
+
+### Senha inicial do associado
+
+Na aprovação da candidatura, a conta do associado é criada com **senha inicial = data de nascimento** (formato `DD/MM/AAAA`), enviada por e-mail. No primeiro login, o associado é **obrigado** a definir uma nova senha com no mínimo 8 caracteres contendo **letras e números**. A consulta pública de processo continua usando CPF + ano de nascimento.
+
 ## Roadmap
 
 - CMS de artigos e eventos
 - Área exclusiva ampliada e biblioteca institucional
-- Integração com gateway de pagamentos (Asaas/Pagar.me)
 
 ## Design
 

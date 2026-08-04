@@ -1,5 +1,6 @@
 import { PrismaClient, MemberCategory, MemberStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { prepareCpfForStorage } from "../src/lib/pii";
 
 const prisma = new PrismaClient();
 
@@ -39,12 +40,14 @@ async function main() {
 
   const defaultPassword = `${String(member.birthDate.getUTCDate()).padStart(2, "0")}/${String(member.birthDate.getUTCMonth() + 1).padStart(2, "0")}/${member.birthDate.getUTCFullYear()}`;
   const passwordHash = await bcrypt.hash(defaultPassword, 12);
+  const cpfStored = prepareCpfForStorage(member.cpf);
 
   const user = await prisma.user.upsert({
     where: { email: member.email },
     update: {
       passwordHash,
       role: "member",
+      mustChangePassword: true,
       person: {
         update: {
           fullName: member.fullName,
@@ -84,11 +87,13 @@ async function main() {
       email: member.email,
       passwordHash,
       role: "member",
+      mustChangePassword: true,
       person: {
         create: {
           fullName: member.fullName,
           email: member.email,
-          cpfEncrypted: member.cpf,
+          cpfEncrypted: cpfStored.cpfEncrypted,
+          cpfHash: cpfStored.cpfHash,
           birthDate: member.birthDate,
           city: member.publicCity,
           state: member.publicState,

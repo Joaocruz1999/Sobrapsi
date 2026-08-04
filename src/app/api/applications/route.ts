@@ -26,6 +26,7 @@ import { validateCpfForApplicationEdit } from "@/lib/cpf-candidature-eligibility
 import { prisma } from "@/lib/prisma";
 import { isStaffRole } from "@/lib/staff-permissions";
 import { getUserById } from "@/lib/users";
+import { prepareCpfForStorage, prepareRgForStorage, withDecryptedPiiForDisplay } from "@/lib/pii";
 import type { MemberCategory } from "@prisma/client";
 
 const STAFF_APPLICATION_ERROR =
@@ -127,7 +128,31 @@ export async function GET() {
         pendingDraft: true,
       });
     }
-    return NextResponse.json({ application: result.application });
+    const application = result.application;
+    if (!application) {
+      return NextResponse.json({ application: null });
+    }
+    // `user` só existe quando a candidatura está vinculada a um User logado;
+    // nos demais modos o tipo da união não possui essa propriedade.
+    const userWithPerson = (
+      application as {
+        user?: {
+          person?: { cpfEncrypted?: string | null; rgEncrypted?: string | null } | null;
+        } | null;
+      }
+    ).user;
+    return NextResponse.json({
+      application: {
+        ...application,
+        candidate: withDecryptedPiiForDisplay(application.candidate),
+        user: userWithPerson
+          ? {
+              ...userWithPerson,
+              person: withDecryptedPiiForDisplay(userWithPerson.person),
+            }
+          : userWithPerson,
+      },
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Erro ao carregar candidatura" }, { status: 500 });
@@ -241,7 +266,12 @@ export async function PATCH(request: NextRequest) {
         }
 
         await createCandidateSession(application.id);
-        return NextResponse.json({ application });
+        return NextResponse.json({
+          application: {
+            ...application,
+            candidate: withDecryptedPiiForDisplay(application.candidate),
+          },
+        });
       }
 
       return NextResponse.json(
@@ -327,14 +357,17 @@ export async function PATCH(request: NextRequest) {
         if (isGuest) {
           await upsertApplicationCandidate(application.id, data);
         } else if (userSession) {
+          const cpfStored = prepareCpfForStorage(data.cpf ? String(data.cpf) : null);
+          const rgStored = prepareRgForStorage(data.rg ? String(data.rg) : null);
           await prisma.person.upsert({
             where: { userId: userSession.userId },
             create: {
               userId: userSession.userId,
               fullName: data.fullName,
               socialName: data.socialName,
-              cpfEncrypted: data.cpf,
-              rgEncrypted: data.rg,
+              cpfEncrypted: cpfStored.cpfEncrypted,
+              cpfHash: cpfStored.cpfHash,
+              rgEncrypted: rgStored.rgEncrypted,
               rgIssuer: data.rgIssuer,
               birthDate: data.birthDate ? new Date(data.birthDate) : null,
               nationality: data.nationality,
@@ -349,8 +382,9 @@ export async function PATCH(request: NextRequest) {
             update: {
               fullName: data.fullName,
               socialName: data.socialName,
-              cpfEncrypted: data.cpf,
-              rgEncrypted: data.rg,
+              cpfEncrypted: cpfStored.cpfEncrypted,
+              cpfHash: cpfStored.cpfHash,
+              rgEncrypted: rgStored.rgEncrypted,
               rgIssuer: data.rgIssuer,
               birthDate: data.birthDate ? new Date(data.birthDate) : null,
               nationality: data.nationality,
@@ -618,7 +652,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "Etapa inválida" }, { status: 400 });
     }
 
-    return NextResponse.json({ application: updated });
+    return NextResponse.json({
+      application: {
+        ...updated,
+        candidate: withDecryptedPiiForDisplay(updated.candidate),
+      },
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Erro ao salvar" }, { status: 500 });

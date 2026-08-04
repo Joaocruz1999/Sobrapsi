@@ -117,6 +117,7 @@ model Person {
   fullName     String   @map("full_name")
   socialName   String?  @map("social_name")
   cpfEncrypted String?  @map("cpf_encrypted")
+  cpfHash      String?  @map("cpf_hash")
   rgEncrypted  String?  @map("rg_encrypted")
   birthDate    DateTime? @map("birth_date")
   nationality  String?
@@ -144,6 +145,7 @@ model Person {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([cpfHash])
   @@map("people")
 }
 
@@ -176,6 +178,9 @@ model Application {
   member            Member?
   publicProfileDraft ApplicationPublicProfile?
 
+  @@index([userId])
+  @@index([status])
+  @@index([submittedAt])
   @@map("applications")
 }
 
@@ -185,6 +190,7 @@ model ApplicationCandidate {
   fullName                String    @map("full_name")
   socialName              String?   @map("social_name")
   cpfEncrypted            String?   @map("cpf_encrypted")
+  cpfHash                 String?   @map("cpf_hash")
   rgEncrypted             String?   @map("rg_encrypted")
   birthDate               DateTime? @map("birth_date")
   nationality             String?
@@ -212,6 +218,7 @@ model ApplicationCandidate {
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
+  @@index([cpfHash])
   @@map("application_candidates")
 }
 
@@ -268,6 +275,7 @@ model EducationRecord {
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
+  @@index([applicationId])
   @@map("education_records")
 }
 
@@ -311,6 +319,8 @@ model Document {
   owner       User?        @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
+  @@index([ownerUserId])
+  @@index([applicationId])
   @@map("documents")
 }
 
@@ -336,6 +346,7 @@ model Member {
   payments        Payment[]
   adminNotes      AdminNote[]
 
+  @@index([status])
   @@map("members")
 }
 
@@ -390,7 +401,7 @@ model Payment {
   type              String
   provider          String?
   providerPaymentId String?       @map("provider_payment_id")
-  amount            Float
+  amount            Decimal       @db.Decimal(10, 2)
   status            PaymentStatus @default(pending)
   dueDate           DateTime?     @map("due_date")
   paidAt            DateTime?     @map("paid_at")
@@ -400,6 +411,10 @@ model Payment {
   member      Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
   application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+  @@index([memberId])
+  @@index([status])
+  @@index([applicationId])
   @@map("payments")
 }
 
@@ -417,6 +432,8 @@ model AuditLog {
 
   actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
+  @@index([entityType, entityId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 
@@ -433,6 +450,8 @@ model AdminNote {
   member      Member?      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  @@index([applicationId])
+  @@index([memberId])
   @@map("admin_notes")
 }
 
@@ -447,6 +466,7 @@ model Consent {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, consentType])
   @@map("consents")
 }
 

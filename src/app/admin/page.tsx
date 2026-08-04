@@ -15,8 +15,9 @@ export default function AdminPage() {
         eyebrow="Admin"
         title="Painel Administrativo"
         subtitle="Gestão de associados, candidaturas, blog e equipe."
+        fullWidth
       />
-      <SiteContainer className="pb-16 pt-2">
+      <SiteContainer className="mx-0 max-w-none pb-16 pt-2">
         <AdminPanel />
         <p className="mt-8 text-sm text-muted">
           <Link href="/" className="text-primary hover:underline">

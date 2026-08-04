@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { APPLICATION_STATUS_LABELS } from "@/lib/applications";
 import { CATEGORY_LABELS } from "@/lib/constants";
+import { withDecryptedPiiForDisplay } from "@/lib/pii";
 
 import { requireStaffPermission, staffAuthErrorResponse } from "@/lib/admin-auth";
 
@@ -34,12 +35,14 @@ export async function GET(
     return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
   }
 
+  const personSource = application.candidate ?? application.user?.person ?? null;
+
   return NextResponse.json({
     application: {
       ...application,
       statusLabel: APPLICATION_STATUS_LABELS[application.status],
       categoryLabel: CATEGORY_LABELS[application.categoryRequested],
-      person: application.candidate ?? application.user?.person ?? null,
+      person: withDecryptedPiiForDisplay(personSource),
     },
   });
 }

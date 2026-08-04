@@ -485,6 +485,7 @@ export function AdminPanel() {
                   onRefresh={refreshData}
                   onAction={handleAction}
                   onStatusChange={handleStatusChange}
+                  onGoToMembers={() => setTab("members")}
                 />
               )}
             </CardContent>

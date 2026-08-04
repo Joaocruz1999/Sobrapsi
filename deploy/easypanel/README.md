@@ -59,11 +59,12 @@ Edite `.env` e defina pelo menos:
 
 - `POSTGRES_PASSWORD`
 - `SESSION_SECRET`
-- `ADMIN_SECRET`
-- `ENCRYPTION_KEY`
+- `ADMIN_SEED_PASSWORD` (senha inicial do staff `admin@sobrapsi.org.br`, usada no seed)
+- `ENCRYPTION_KEY` (obrigatória — sem ela o app recusa gravar/ler CPF/RG)
 - `CRON_SECRET`
+- `MP_WEBHOOK_SECRET` (assinatura do webhook do Mercado Pago)
 - `NEXT_PUBLIC_APP_URL=https://sobrapsi.org.br`
-- credenciais do Mercado Pago / Resend, se for usar
+- credenciais do Mercado Pago e SMTP da Hostinger
 
 ## 3. Subir aplicação (build + banco + migrations)
 

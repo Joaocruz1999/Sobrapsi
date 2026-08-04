@@ -2,7 +2,6 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import type { UserRole } from "@prisma/client";
 import { getSession, type SessionPayload } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -11,19 +10,6 @@ import {
   canManageStaff,
   isStaffRole,
 } from "@/lib/staff-permissions";
-
-export function getAdminSecret(): string {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) {
-    throw new Error("ADMIN_SECRET não configurado");
-  }
-  return secret;
-}
-
-export function verifyAdminRequest(request: NextRequest) {
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${getAdminSecret()}`;
-}
 
 export async function getStaffSession(): Promise<SessionPayload | null> {
   const session = await getSession();
@@ -59,16 +45,6 @@ export async function authorizeStaffRequest(
   request: NextRequest,
   permission: "secretariat" | "editorial" | "staff-management"
 ) {
-  const legacyAdmin = verifyAdminRequest(request);
-  if (legacyAdmin) {
-    return {
-      userId: "legacy-admin",
-      email: "admin@legacy",
-      role: "admin" as UserRole,
-      staffEditor: true,
-    };
-  }
-
   const session = await getStaffSession();
   if (!session) return null;
 

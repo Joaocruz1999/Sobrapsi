@@ -4,8 +4,14 @@ import { ApplicationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatRegistrationNumber } from "@/lib/utils";
 import { randomBytes } from "crypto";
+import path from "path";
+import { unlink } from "fs/promises";
 import { generateMembershipCardPdf } from "@/lib/membership-card";
-import { sendMemberApprovedAccountEmail } from "@/lib/email";
+import {
+  sendMemberApprovedAccountEmail,
+  sendApplicationApprovedPendingPaymentEmail,
+  sendComplementRequestEmail,
+} from "@/lib/email";
 import { applicationInclude } from "@/lib/application-guest";
 import { APPLICATION_FEE_CARD_AMOUNT, CATEGORY_LABELS } from "@/lib/constants";
 import { resolveAuditActorUserId, resolvePortalAdminAuthorId } from "@/lib/audit";
@@ -20,6 +26,7 @@ import {
 import { hashPassword } from "@/lib/users";
 import { isStaffRole } from "@/lib/staff-permissions";
 import { cleanupStaffUserApplications } from "@/lib/application-duplicates";
+import { readCpf } from "@/lib/pii";
 
 export {
   APPLICATION_STATUS_LABELS,
@@ -227,6 +234,7 @@ async function ensureApplicationUser(applicationId: string) {
           fullName: candidate.fullName,
           socialName: candidate.socialName,
           cpfEncrypted: candidate.cpfEncrypted,
+          cpfHash: candidate.cpfHash,
           rgEncrypted: candidate.rgEncrypted,
           rgIssuer: candidate.rgIssuer,
           birthDate: candidate.birthDate,
@@ -319,7 +327,7 @@ export async function finalizeApplicationApproval(
     throw new Error("Data de nascimento obrigatória para criar a conta do associado");
   }
 
-  const cpfRaw = person?.cpfEncrypted ?? candidate?.cpfEncrypted;
+  const cpfRaw = readCpf(person?.cpfEncrypted ?? candidate?.cpfEncrypted ?? null);
   if (!cpfRaw) {
     throw new Error("CPF obrigatório para criar a conta do associado");
   }
@@ -419,7 +427,8 @@ export async function finalizeApplicationApproval(
     member.registrationNumber,
     CATEGORY_LABELS[member.category],
     formatCpfInput(cpfRaw),
-    defaultPassword
+    defaultPassword,
+    validUntil
   );
 
   try {
@@ -567,10 +576,25 @@ export async function updateApplicationStatusForAdmin(
 
   const current = await prisma.application.findUnique({
     where: { id: applicationId },
-    include: { member: true, payments: true },
+    include: {
+      member: true,
+      payments: true,
+      user: { include: { person: true } },
+      candidate: true,
+    },
   });
 
   if (!current) throw new Error("Candidatura não encontrada");
+
+  const contactEmail =
+    current.candidate?.email ??
+    current.user?.person?.email ??
+    current.user?.email ??
+    "";
+  const contactName =
+    current.candidate?.fullName ??
+    current.user?.person?.fullName ??
+    "Candidato";
 
   if (current.status === "approved" && status !== "approved") {
     await revertApprovedApplicationSideEffects(applicationId);
@@ -580,7 +604,7 @@ export async function updateApplicationStatusForAdmin(
     const { userId } = await ensureApplicationUser(applicationId);
     await ensureApplicationFeePayment(applicationId, userId, { forcePending: true });
 
-    return prisma.application.update({
+    const updated = await prisma.application.update({
       where: { id: applicationId },
       data: {
         status: ApplicationStatus.approved_pending_payment,
@@ -589,6 +613,12 @@ export async function updateApplicationStatusForAdmin(
         decision: "approved",
       },
     });
+
+    if (contactEmail) {
+      await sendApplicationApprovedPendingPaymentEmail(contactEmail, contactName);
+    }
+
+    return updated;
   }
 
   if (status === "approved") {
@@ -626,10 +656,30 @@ export async function updateApplicationStatusForAdmin(
     return prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
   }
 
-  return prisma.application.update({
+  const updated = await prisma.application.update({
     where: { id: applicationId },
     data: { status: status as ApplicationStatus },
   });
+
+  if (status === "awaiting_complement" && contactEmail) {
+    await sendComplementRequestEmail(contactEmail, contactName);
+  }
+
+  return updated;
+}
+
+async function deleteApplicationDocumentsFromDisk(
+  documents: { filePath: string }[]
+) {
+  await Promise.all(
+    documents.map(async (doc) => {
+      try {
+        await unlink(path.resolve(process.cwd(), doc.filePath));
+      } catch (err) {
+        console.error("Erro ao remover documento do disco:", err);
+      }
+    })
+  );
 }
 
 export async function rejectApplication(
@@ -638,8 +688,13 @@ export async function rejectApplication(
   reasonInternal: string,
   reasonPublic?: string
 ) {
-  return prisma.$transaction(async (tx) => {
-    const app = await tx.application.update({
+  const documents = await prisma.document.findMany({
+    where: { applicationId },
+    select: { filePath: true },
+  });
+
+  const app = await prisma.$transaction(async (tx) => {
+    const updated = await tx.application.update({
       where: { id: applicationId },
       data: {
         status: "rejected",
@@ -651,6 +706,8 @@ export async function rejectApplication(
       },
     });
 
+    await tx.document.deleteMany({ where: { applicationId } });
+
     await tx.auditLog.create({
       data: {
         actorUserId: resolveAuditActorUserId(reviewerId),
@@ -660,8 +717,12 @@ export async function rejectApplication(
       },
     });
 
-    return app;
+    return updated;
   });
+
+  await deleteApplicationDocumentsFromDisk(documents);
+
+  return app;
 }
 
 export async function requestComplement(

@@ -105,6 +105,9 @@ export default function ChangePasswordPage() {
                 minLength={8}
                 required
               />
+              <p className="text-xs text-muted">
+                Mínimo de 8 caracteres, com pelo menos uma letra e um número.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar nova senha</Label>

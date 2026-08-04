@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ADMIN_KANBAN_COLUMNS, appsInColumn, kanbanColumnForStatus } from "@/lib/admin-kanban";
+import { ADMIN_KANBAN_COLUMNS, PAYMENT_OVERDUE_HOURS, appsInColumn, kanbanColumnForStatus } from "@/lib/admin-kanban";
 import { DOCUMENT_TYPES } from "@/lib/application-shared";
 import {
   EDUCATION_COURSE_TYPES,
@@ -28,6 +28,7 @@ export interface ApplicationListItem {
   candidateName: string;
   candidateEmail: string;
   submittedAt?: string;
+  reviewedAt?: string | null;
   documentsCount: number;
 }
 
@@ -113,9 +114,11 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
 function KanbanCard({
   app,
   onOpen,
+  overdue = false,
 }: {
   app: ApplicationListItem;
   onOpen: () => void;
+  overdue?: boolean;
 }) {
   return (
     <div
@@ -124,7 +127,9 @@ function KanbanCard({
         e.dataTransfer.setData("application/id", app.id);
         e.dataTransfer.effectAllowed = "move";
       }}
-      className="rounded-lg border border-white/10 bg-zinc-950/80"
+      className={`rounded-lg border bg-zinc-950/80 ${
+        overdue ? "border-red-500/60 bg-red-500/10" : "border-white/10"
+      }`}
     >
       <div className="flex items-start gap-2 p-3">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-muted" />
@@ -138,6 +143,11 @@ function KanbanCard({
             <Badge variant="outline" className="text-[10px]">
               {app.documentsCount} docs
             </Badge>
+            {overdue && (
+              <Badge variant="outline" className="border-red-500/60 text-[10px] text-red-300">
+                Pagamento atrasado
+              </Badge>
+            )}
           </div>
           <Button
             type="button"
@@ -496,6 +506,86 @@ function ApplicationDetailDialog({
   );
 }
 
+function isPaymentOverdue(app: ApplicationListItem): boolean {
+  if (app.status !== "approved_pending_payment") return false;
+  const ref = app.reviewedAt ? new Date(app.reviewedAt) : null;
+  if (!ref) return false;
+  const hours = (Date.now() - ref.getTime()) / (1000 * 60 * 60);
+  return hours > PAYMENT_OVERDUE_HOURS;
+}
+
+type RejectedApplication = {
+  id: string;
+  candidateName: string;
+  candidateEmail: string;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+};
+
+function RejectedApplicationsDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [items, setItems] = useState<RejectedApplication[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/applications?status=rejected", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.applications ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) load();
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
+        <div className="p-6">
+          <DialogHeader className="border-b border-white/10 pb-4">
+            <DialogTitle>Candidaturas reprovadas</DialogTitle>
+          </DialogHeader>
+          {loading ? (
+            <p className="mt-4 text-sm text-muted">Carregando...</p>
+          ) : items.length === 0 ? (
+            <p className="mt-4 text-sm text-muted">Nenhuma candidatura reprovada.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-white/10">
+              {items.map((a) => (
+                <li key={a.id} className="py-2">
+                  <p className="truncate text-sm font-medium text-white">
+                    {a.candidateName}
+                  </p>
+                  <p className="truncate text-xs text-muted">
+                    {a.candidateEmail}
+                    {a.submittedAt && ` · enviada em ${formatDate(a.submittedAt)}`}
+                    {a.reviewedAt && ` · analisada em ${formatDate(a.reviewedAt)}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ApplicationsKanban({
   applications,
   loading,
@@ -504,6 +594,7 @@ export function ApplicationsKanban({
   onRefresh,
   onAction,
   onStatusChange,
+  onGoToMembers,
 }: {
   applications: ApplicationListItem[];
   loading: boolean;
@@ -512,12 +603,15 @@ export function ApplicationsKanban({
   onRefresh: () => void;
   onAction: (applicationId: string, action: string, extra?: Record<string, string>) => void;
   onStatusChange: (applicationId: string, status: string) => void;
+  onGoToMembers?: () => void;
 }) {
   const [openAppId, setOpenAppId] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, ApplicationDetail>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [dragOverAction, setDragOverAction] = useState<string | null>(null);
+  const [rejectedOpen, setRejectedOpen] = useState(false);
 
   const openApp = applications.find((a) => a.id === openAppId) ?? null;
 
@@ -565,6 +659,22 @@ export function ApplicationsKanban({
     onStatusChange(applicationId, targetStatus);
   }
 
+  function handleActionDrop(e: React.DragEvent, action: string) {
+    e.preventDefault();
+    setDragOverAction(null);
+    const applicationId = e.dataTransfer.getData("application/id");
+    if (!applicationId) return;
+    onAction(applicationId, action);
+  }
+
+  function handleApproveDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOverAction(null);
+    const applicationId = e.dataTransfer.getData("application/id");
+    if (!applicationId) return;
+    onStatusChange(applicationId, "approved");
+  }
+
   if (loading) {
     return <p className="text-muted">Carregando candidaturas...</p>;
   }
@@ -573,12 +683,44 @@ export function ApplicationsKanban({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted">
-          Arraste os cards entre as colunas para atualizar o status. Clique em &quot;Abrir candidatura&quot; para ver todos os dados.
+          Arraste os cards entre as colunas. Arraste para <strong>Aprovado</strong> ou <strong>Reprovado</strong> para decidir a candidatura.
           {refreshing && <span className="ml-2 text-primary">Atualizando...</span>}
         </p>
-        <Button size="sm" variant="outline" onClick={onRefresh}>
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className={`shadow-none border-green-500/40 bg-green-500/15 text-green-200 hover:bg-green-500/25 ${
+              dragOverAction === "approve" ? "ring-2 ring-green-400" : ""
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverAction("approve");
+            }}
+            onDragLeave={() => setDragOverAction(null)}
+            onDrop={handleApproveDrop}
+            onClick={() => onGoToMembers?.()}
+          >
+            Aprovado
+          </Button>
+          <Button
+            size="sm"
+            className={`shadow-none border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25 ${
+              dragOverAction === "reject" ? "ring-2 ring-red-400" : ""
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverAction("reject");
+            }}
+            onDragLeave={() => setDragOverAction(null)}
+            onDrop={(e) => handleActionDrop(e, "reject")}
+            onClick={() => setRejectedOpen(true)}
+          >
+            Reprovado
+          </Button>
+          <Button size="sm" variant="outline" onClick={onRefresh}>
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       <ApplicationDetailDialog
@@ -622,6 +764,8 @@ export function ApplicationsKanban({
         }}
       />
 
+      <RejectedApplicationsDialog open={rejectedOpen} onOpenChange={setRejectedOpen} />
+
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ADMIN_KANBAN_COLUMNS.map((column) => {
           const columnApps = appsInColumn(applications, column);
@@ -630,7 +774,7 @@ export function ApplicationsKanban({
           return (
             <div
               key={column.status}
-              className={`flex w-72 shrink-0 flex-col rounded-xl border bg-zinc-900/40 ${
+              className={`flex min-w-[18rem] flex-1 flex-col rounded-xl border bg-zinc-900/40 ${
                 isDragOver ? "border-primary bg-primary/5" : "border-white/10"
               }`}
               onDragOver={(e) => {
@@ -655,6 +799,7 @@ export function ApplicationsKanban({
                     <KanbanCard
                       key={app.id}
                       app={app}
+                      overdue={isPaymentOverdue(app)}
                       onOpen={() => openApplication(app.id)}
                     />
                   ))

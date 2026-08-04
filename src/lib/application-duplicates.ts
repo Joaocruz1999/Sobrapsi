@@ -1,6 +1,7 @@
 import "server-only";
 
 import { normalizeCpf } from "@/lib/application-shared";
+import { readCpf } from "@/lib/pii";
 import { prisma } from "@/lib/prisma";
 import { STAFF_ROLES } from "@/lib/staff-permissions";
 
@@ -8,12 +9,13 @@ type ApplicationWithIdentity = {
   id: string;
   status: string;
   userId: string | null;
-  candidate?: { cpfEncrypted: string | null } | null;
-  user?: { person?: { cpfEncrypted: string | null } | null } | null;
+  candidate?: { cpfEncrypted: string | null; cpfHash: string | null } | null;
+  user?: { person?: { cpfEncrypted: string | null; cpfHash: string | null } | null } | null;
 };
 
 function getApplicationCpf(app: ApplicationWithIdentity): string | null {
-  const cpf = app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted ?? null;
+  const stored = app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted ?? null;
+  const cpf = readCpf(stored);
   return cpf ? normalizeCpf(cpf) : null;
 }
 
@@ -79,7 +81,7 @@ export async function buildApprovedCpfSet(): Promise<Set<string>> {
 
   const cpfs = new Set<string>();
   for (const app of approved) {
-    const cpf = app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted;
+    const cpf = readCpf(app.candidate?.cpfEncrypted ?? app.user?.person?.cpfEncrypted);
     if (cpf) cpfs.add(normalizeCpf(cpf));
   }
   return cpfs;

@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
       categoryLabel: CATEGORY_LABELS[a.categoryRequested],
       submittedAt: a.submittedAt,
       createdAt: a.createdAt,
+      reviewedAt: a.reviewedAt,
       candidateName:
         a.candidate?.fullName ??
         a.user?.person?.fullName ??
@@ -127,10 +128,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ ok: true, member });
     }
     case "reject": {
-      if (!reasonInternal) {
-        return NextResponse.json({ error: "Motivo interno obrigatório" }, { status: 400 });
-      }
-      await rejectApplication(applicationId, actorId, reasonInternal, reasonPublic);
+      await rejectApplication(
+        applicationId,
+        actorId,
+        reasonInternal || "Reprovado pela secretaria via painel",
+        reasonPublic
+      );
       await sendApplicationRejectedEmail(email, name);
       return NextResponse.json({ ok: true });
     }

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { CATEGORY_LABELS } from "@/lib/constants";
+import {
+  requireStaffPermission,
+  staffAuthErrorResponse,
+} from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -80,8 +83,10 @@ function serializeProfile(
 }
 
 export async function GET(request: NextRequest) {
-  if (!verifyAdminRequest(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    await requireStaffPermission(request, "secretariat");
+  } catch (error) {
+    return staffAuthErrorResponse(error);
   }
 
   const status = request.nextUrl.searchParams.get("status");
@@ -112,8 +117,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!verifyAdminRequest(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let session;
+  try {
+    session = await requireStaffPermission(request, "secretariat");
+  } catch (error) {
+    return staffAuthErrorResponse(error);
   }
 
   try {
@@ -149,7 +157,7 @@ export async function PATCH(request: NextRequest) {
         data: {
           reviewStatus: "approved",
           reviewedAt: new Date(),
-          reviewedBy: "admin",
+          reviewedBy: session.userId,
         },
         include: {
           member: {
@@ -162,6 +170,7 @@ export async function PATCH(request: NextRequest) {
 
       await prisma.auditLog.create({
         data: {
+          actorUserId: session.userId,
           action: "public_profile.approved",
           entityType: "public_profile",
           entityId: profileId,
@@ -178,7 +187,7 @@ export async function PATCH(request: NextRequest) {
         data: {
           reviewStatus: "rejected",
           reviewedAt: new Date(),
-          reviewedBy: "admin",
+          reviewedBy: session.userId,
         },
         include: {
           member: {
@@ -191,6 +200,7 @@ export async function PATCH(request: NextRequest) {
 
       await prisma.auditLog.create({
         data: {
+          actorUserId: session.userId,
           action: "public_profile.rejected",
           entityType: "public_profile",
           entityId: profileId,

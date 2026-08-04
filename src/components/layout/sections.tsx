@@ -10,6 +10,7 @@ interface PageHeroProps {
   backgroundText?: string;
   children?: React.ReactNode;
   className?: string;
+  fullWidth?: boolean;
 }
 
 export function PageHero({
@@ -19,6 +20,7 @@ export function PageHero({
   backgroundText,
   children,
   className,
+  fullWidth = false,
 }: PageHeroProps) {
   return (
     <section
@@ -36,7 +38,7 @@ export function PageHero({
           {backgroundText}
         </div>
       )}
-      <div className={SITE_SHELL}>
+      <div className={fullWidth ? "w-full px-4 sm:px-6 lg:px-8" : SITE_SHELL}>
         <div className="relative pt-10 pb-5 sm:pt-12 sm:pb-6">
           {eyebrow && (
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">

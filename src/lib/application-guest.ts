@@ -1,6 +1,6 @@
 import "server-only";
 
-import { normalizeCpf } from "@/lib/application-shared";
+import { prepareCpfForStorage, prepareRgForStorage } from "@/lib/pii";
 import { prisma } from "@/lib/prisma";
 import type { MemberCategory, Prisma } from "@prisma/client";
 
@@ -112,11 +112,14 @@ export async function getApplicationForCandidate(applicationId: string) {
 }
 
 export function candidateDataFromPayload(data: Record<string, unknown>) {
+  const cpfStored = prepareCpfForStorage(data.cpf ? String(data.cpf) : null);
+  const rgStored = prepareRgForStorage(data.rg ? String(data.rg) : null);
   return {
     fullName: String(data.fullName ?? ""),
     socialName: data.socialName ? String(data.socialName) : null,
-    cpfEncrypted: data.cpf ? normalizeCpf(String(data.cpf)) : null,
-    rgEncrypted: data.rg ? String(data.rg) : null,
+    cpfEncrypted: cpfStored.cpfEncrypted,
+    cpfHash: cpfStored.cpfHash,
+    rgEncrypted: rgStored.rgEncrypted,
     rgIssuer: data.rgIssuer ? String(data.rgIssuer) : null,
     birthDate: data.birthDate ? new Date(String(data.birthDate)) : null,
     nationality: data.nationality ? String(data.nationality) : null,

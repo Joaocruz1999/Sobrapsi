@@ -8,7 +8,11 @@ import { prisma } from "@/lib/prisma";
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().optional(),
-    newPassword: z.string().min(8, "A nova senha deve ter no mínimo 8 caracteres"),
+    newPassword: z
+      .string()
+      .min(8, "A nova senha deve ter no mínimo 8 caracteres")
+      .regex(/[A-Za-z]/, "A senha deve conter pelo menos uma letra")
+      .regex(/[0-9]/, "A senha deve conter pelo menos um número"),
     confirmPassword: z.string().min(8),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
