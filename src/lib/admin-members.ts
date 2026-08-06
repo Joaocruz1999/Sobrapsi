@@ -2,10 +2,10 @@ import "server-only";
 
 import type { MemberCategory, MemberStatus } from "@prisma/client";
 import { formatBirthDateAsPassword } from "@/lib/application-shared";
+import { CATEGORY_LABELS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/users";
 import { formatRegistrationNumber } from "@/lib/utils";
-import { CATEGORY_LABELS } from "@/lib/constants";
 
 export interface AdminMemberItem {
   id: string;
@@ -34,8 +34,18 @@ const STATUS_LABELS: Record<MemberStatus, string> = {
   honorary: "Honorário",
 };
 
-export async function listMembersForAdmin(): Promise<AdminMemberItem[]> {
+export async function listMembersForAdmin(options?: {
+  status?: MemberStatus | MemberStatus[];
+}): Promise<AdminMemberItem[]> {
+  const statusFilter = options?.status;
   const members = await prisma.member.findMany({
+    where: statusFilter
+      ? {
+          status: Array.isArray(statusFilter)
+            ? { in: statusFilter }
+            : statusFilter,
+        }
+      : undefined,
     orderBy: { registrationNumber: "asc" },
     include: {
       user: { include: { person: true } },

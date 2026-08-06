@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CATEGORY_LABELS } from "@/lib/constants";
-import type { MemberCategory } from "@/lib/member-types";
+import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants";
+import { MEMBER_STATUSES, type MemberCategory } from "@/lib/member-types";
 import { formatDate } from "@/lib/utils";
 
 export interface AdminMemberItem {
@@ -59,6 +59,9 @@ export function MemberManagement({
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EditForm | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [exportFormat, setExportFormat] = useState<"csv" | "xlsx">("csv");
+  const [exporting, setExporting] = useState(false);
 
   async function openEdit(memberId: string) {
     setError("");
@@ -165,6 +168,36 @@ export function MemberManagement({
       setForm(null);
     }
   }
+
+  async function handleExport(format: "csv" | "xlsx") {
+    setError("");
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ format });
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await fetch(`/api/admin/members/export?${params}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Não foi possível a exportação.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `associados.${format === "csv" ? "csv" : "xlsx"}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+  const visibleMembers =
+    statusFilter === "all"
+      ? members
+      : members.filter((m) => m.status === statusFilter);
 
   if (loading) {
     return <p className="text-muted">Carregando...</p>;
@@ -282,12 +315,75 @@ export function MemberManagement({
       )}
 
       <Card className="border-white/10 bg-zinc-900/50">
-        <CardHeader>
+        <CardHeader className="space-y-4">
           <CardTitle>Associados cadastrados</CardTitle>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="export-status" className="block text-center">
+                Filtrar status
+              </Label>
+              <select
+                id="export-status"
+                className="h-11 appearance-none rounded-lg border border-white/20 bg-transparent bg-[length:12px_12px] bg-[position:right_0.65rem_center] bg-no-repeat px-3 pr-8 text-center text-sm text-white"
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")",
+                }}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all" className="bg-zinc-900">
+                  Todos
+                </option>
+                {MEMBER_STATUSES.map((status) => (
+                  <option key={status} value={status} className="bg-zinc-900">
+                    {STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="export-format" className="block text-center">
+                  Formato
+                </Label>
+                <select
+                  id="export-format"
+                  className="h-11 appearance-none rounded-lg border border-white/20 bg-transparent bg-[length:12px_12px] bg-[position:right_0.65rem_center] bg-no-repeat px-3 pr-8 text-center text-sm text-white"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")",
+                  }}
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as "csv" | "xlsx")}
+                >
+                  <option value="csv" className="bg-zinc-900">
+                    CSV
+                  </option>
+                  <option value="xlsx" className="bg-zinc-900">
+                    XLSX
+                  </option>
+                </select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={exporting || actionLoading}
+                onClick={() => handleExport(exportFormat)}
+              >
+                {exporting ? "Exportando..." : "Exportar"}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {members.length === 0 ? (
-            <p className="text-muted">Nenhum associado no banco.</p>
+          {visibleMembers.length === 0 ? (
+            <p className="text-muted">
+              {statusFilter === "all"
+                ? "Nenhum associado no banco."
+                : "Nenhum associado com este status."}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -302,7 +398,7 @@ export function MemberManagement({
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member) => (
+                  {visibleMembers.map((member) => (
                     <tr key={member.id} className="border-b border-white/5 align-top">
                       <td className="py-3 pr-4 text-white">{member.publicName}</td>
                       <td className="py-3 pr-4 font-mono text-xs">{member.registrationNumber}</td>
