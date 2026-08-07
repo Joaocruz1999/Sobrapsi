@@ -985,6 +985,38 @@ function PersonalForm({
     phone: person.phone ?? "",
     phoneAlt: person.phoneAlt ?? "",
   });
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
+  async function fetchAddressByCep(rawCep: string) {
+    const cep = rawCep.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+
+    setCepLoading(true);
+    setCepError(null);
+
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+
+      if (data.erro) {
+        setCepError("CEP não encontrado.");
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        zipCode: cep,
+        address: [data.logradouro, data.bairro].filter(Boolean).join(" - "),
+        city: data.localidade ?? "",
+        state: data.uf ?? prev.state,
+      }));
+    } catch {
+      setCepError("Não foi possível consultar o CEP.");
+    } finally {
+      setCepLoading(false);
+    }
+  }
 
   return (
     <form
@@ -1003,6 +1035,21 @@ function PersonalForm({
       <Field label="CPF" id="cpf" value={form.cpf} onChange={(v) => setForm({ ...form, cpf: v })} required />
       <Field label="RG" id="rg" value={form.rg} onChange={(v) => setForm({ ...form, rg: v })} />
       <Field label="Data de nascimento" id="birthDate" type="date" value={form.birthDate} onChange={(v) => setForm({ ...form, birthDate: v })} required />
+      <div className="space-y-2 sm:col-span-2">
+        <Field
+          label="CEP"
+          id="zipCode"
+          value={form.zipCode}
+          onChange={(v) => {
+            const digits = v.replace(/\D/g, "").slice(0, 8);
+            setForm({ ...form, zipCode: digits });
+            if (digits.length === 8) void fetchAddressByCep(digits);
+          }}
+          required
+        />
+        {cepLoading && <p className="text-xs text-muted">Buscando CEP...</p>}
+        {cepError && <p className="text-xs text-red-500">{cepError}</p>}
+      </div>
       <Field label="Endereço" id="address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} className="sm:col-span-2" required />
       <Field label="Cidade" id="city" value={form.city} onChange={(v) => setForm({ ...form, city: v })} required />
       <SelectField label="UF" id="state" value={form.state} onChange={(v) => setForm({ ...form, state: v })} required>
@@ -1010,7 +1057,6 @@ function PersonalForm({
           <option key={uf} value={uf}>{uf}</option>
         ))}
       </SelectField>
-      <Field label="CEP" id="zipCode" value={form.zipCode} onChange={(v) => setForm({ ...form, zipCode: v })} required />
       <Field label="E-mail" id="email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
       <Field label="Celular" id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required />
       <Field label="Telefone alternativo" id="phoneAlt" value={form.phoneAlt} onChange={(v) => setForm({ ...form, phoneAlt: v })} />
