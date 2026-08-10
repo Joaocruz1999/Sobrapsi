@@ -78,6 +78,7 @@ type ApplicationData = {
     cpfEncrypted?: string | null;
     birthDate?: string | null;
     address?: string | null;
+    addressNumber?: string | null;
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
@@ -116,6 +117,7 @@ function applyApplicationToState(
       cpf: c.cpfEncrypted ? formatCpfInput(c.cpfEncrypted) : cpfPrefill ?? "",
       birthDate: c.birthDate ? c.birthDate.slice(0, 10) : "",
       address: c.address ?? "",
+      addressNumber: c.addressNumber ?? "",
       city: c.city ?? "",
       state: c.state ?? "PR",
       zipCode: c.zipCode ?? "",
@@ -978,6 +980,7 @@ function PersonalForm({
     birthDate: person.birthDate ?? "",
     nationality: person.nationality ?? "Brasil",
     address: person.address ?? "",
+    addressNumber: person.addressNumber ?? "",
     city: person.city ?? "",
     state: person.state ?? "PR",
     zipCode: person.zipCode ?? "",
@@ -1051,6 +1054,7 @@ function PersonalForm({
         {cepError && <p className="text-xs text-red-500">{cepError}</p>}
       </div>
       <Field label="Endereço" id="address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} className="sm:col-span-2" required />
+      <Field label="Número" id="addressNumber" value={form.addressNumber} onChange={(v) => setForm({ ...form, addressNumber: v })} required />
       <Field label="Cidade" id="city" value={form.city} onChange={(v) => setForm({ ...form, city: v })} required />
       <SelectField label="UF" id="state" value={form.state} onChange={(v) => setForm({ ...form, state: v })} required>
         {BRAZILIAN_STATES.map((uf) => (

@@ -240,6 +240,7 @@ async function ensureApplicationUser(applicationId: string) {
           birthDate: candidate.birthDate,
           nationality: candidate.nationality,
           address: candidate.address,
+          addressNumber: candidate.addressNumber,
           city: candidate.city,
           state: candidate.state,
           zipCode: candidate.zipCode,

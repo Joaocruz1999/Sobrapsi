@@ -124,6 +124,7 @@ export function candidateDataFromPayload(data: Record<string, unknown>) {
     birthDate: data.birthDate ? new Date(String(data.birthDate)) : null,
     nationality: data.nationality ? String(data.nationality) : null,
     address: data.address ? String(data.address) : null,
+    addressNumber: data.addressNumber ? String(data.addressNumber) : null,
     city: data.city ? String(data.city) : null,
     state: data.state ? String(data.state) : null,
     zipCode: data.zipCode ? String(data.zipCode) : null,

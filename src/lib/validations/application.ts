@@ -31,6 +31,7 @@ export const personalDataSchema = z.object({
   birthDate: z.string().min(1, "Data de nascimento obrigatória"),
   nationality: z.string().default("Brasileira"),
   address: z.string().min(3),
+  addressNumber: z.string().min(1, "Número obrigatório"),
   city: z.string().min(2),
   state: z.string().length(2),
   zipCode: z.string().min(8),
