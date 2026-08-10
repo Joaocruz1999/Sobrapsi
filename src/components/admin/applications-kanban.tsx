@@ -50,6 +50,7 @@ interface ApplicationDetail {
     nationality?: string | null;
     phone?: string | null;
     address?: string | null;
+    addressNumber?: string | null;
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
@@ -285,6 +286,7 @@ function ApplicationDetailDialog({
                   }
                 />
                 <DetailRow label="Endereço" value={detail.person?.address} />
+                <DetailRow label="Número" value={detail.person?.addressNumber} />
                 <DetailRow label="CEP" value={detail.person?.zipCode} />
               </div>
             </section>
