@@ -101,11 +101,10 @@ function documentLabel(type: string) {
 }
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
-      <p className="text-sm text-zinc-200">{value}</p>
+      <p className="text-sm text-zinc-200">{value || "Não informado"}</p>
     </div>
   );
 }
