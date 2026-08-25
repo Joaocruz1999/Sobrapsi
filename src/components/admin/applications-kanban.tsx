@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, GripVertical } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ExternalLink, GripVertical, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ADMIN_KANBAN_COLUMNS, PAYMENT_OVERDUE_HOURS, appsInColumn, kanbanColumnForStatus } from "@/lib/admin-kanban";
 import { DOCUMENT_TYPES } from "@/lib/application-shared";
@@ -27,6 +28,7 @@ export interface ApplicationListItem {
   categoryLabel: string;
   candidateName: string;
   candidateEmail: string;
+  cpf?: string | null;
   submittedAt?: string;
   reviewedAt?: string | null;
   documentsCount: number;
@@ -614,8 +616,21 @@ export function ApplicationsKanban({
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [dragOverAction, setDragOverAction] = useState<string | null>(null);
   const [rejectedOpen, setRejectedOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const openApp = applications.find((a) => a.id === openAppId) ?? null;
+
+  const filteredApplications = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return applications;
+    const qDigits = q.replace(/\D/g, "");
+    return applications.filter((a) => {
+      if (a.candidateName?.toLowerCase().includes(q)) return true;
+      if (a.candidateEmail?.toLowerCase().includes(q)) return true;
+      if (a.cpf && qDigits && a.cpf.replace(/\D/g, "").includes(qDigits)) return true;
+      return false;
+    });
+  }, [applications, query]);
 
   async function openApplication(applicationId: string) {
     setOpenAppId(applicationId);
@@ -768,9 +783,28 @@ export function ApplicationsKanban({
 
       <RejectedApplicationsDialog open={rejectedOpen} onOpenChange={setRejectedOpen} />
 
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nome, e-mail ou CPF"
+          className="pl-9"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-0.5 text-xs text-muted hover:text-white"
+          >
+            limpar
+          </button>
+        )}
+      </div>
+
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ADMIN_KANBAN_COLUMNS.map((column) => {
-          const columnApps = appsInColumn(applications, column);
+          const columnApps = appsInColumn(filteredApplications, column);
           const isDragOver = dragOverColumn === column.status;
 
           return (

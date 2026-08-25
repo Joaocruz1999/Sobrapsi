@@ -6,6 +6,7 @@ import { CATEGORY_LABELS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/users";
 import { formatRegistrationNumber } from "@/lib/utils";
+import { formatCpfForDisplay, formatRgForDisplay } from "@/lib/pii";
 
 export interface AdminMemberItem {
   id: string;
@@ -19,6 +20,7 @@ export interface AdminMemberItem {
   statusLabel: string;
   validUntil: Date | null;
   birthDate: Date | null;
+  cpf: string | null;
   publicCity: string | null;
   publicState: string | null;
 }
@@ -66,6 +68,7 @@ export async function listMembersForAdmin(options?: {
     statusLabel: STATUS_LABELS[member.status],
     validUntil: member.validUntil,
     birthDate: member.user.person?.birthDate ?? null,
+    cpf: formatCpfForDisplay(member.user.person?.cpfEncrypted ?? null),
     publicCity: member.publicProfile?.publicCity ?? member.user.person?.city ?? null,
     publicState: member.publicProfile?.publicState ?? member.user.person?.state ?? null,
   }));
@@ -78,27 +81,58 @@ export async function getMemberForAdmin(memberId: string) {
       user: { include: { person: true } },
       publicProfile: true,
       membershipCard: true,
+      application: { include: { documents: true } },
     },
   });
 
   if (!member) return null;
+
+  const person = member.user.person;
+  // Documentos da candidatura de origem; fallback para documentos do próprio usuário.
+  const documents =
+    member.application?.documents ??
+    (await prisma.document.findMany({
+      where: { ownerUserId: member.userId },
+      orderBy: { createdAt: "asc" },
+    }));
 
   return {
     id: member.id,
     userId: member.userId,
     email: member.user.email,
     publicName:
-      member.publicProfile?.publicName ?? member.user.person?.fullName ?? "Associado",
-    fullName: member.user.person?.fullName ?? "",
+      member.publicProfile?.publicName ?? person?.fullName ?? "Associado",
+    fullName: person?.fullName ?? "",
     registrationNumber: member.registrationNumber,
     category: member.category,
     status: member.status,
     validUntil: member.validUntil,
-    birthDate: member.user.person?.birthDate ?? null,
-    publicCity: member.publicProfile?.publicCity ?? member.user.person?.city ?? null,
-    publicState: member.publicProfile?.publicState ?? member.user.person?.state ?? null,
+    birthDate: person?.birthDate ?? null,
+    publicCity: member.publicProfile?.publicCity ?? person?.city ?? null,
+    publicState: member.publicProfile?.publicState ?? person?.state ?? null,
     publicBio: member.publicProfile?.publicBio ?? null,
     isPublic: member.publicProfile?.isPublic ?? false,
+    // PII completo (descriptografado) para o popup "Ver associado"
+    cpf: formatCpfForDisplay(person?.cpfEncrypted ?? null),
+    rg: formatRgForDisplay(person?.rgEncrypted ?? null),
+    nationality: person?.nationality ?? null,
+    phone: person?.phone ?? null,
+    address: person?.address ?? null,
+    addressNumber: person?.addressNumber ?? null,
+    city: person?.city ?? null,
+    state: person?.state ?? null,
+    zipCode: person?.zipCode ?? null,
+    profession: person?.profession ?? null,
+    institution: person?.institution ?? null,
+    practiceCity: person?.practiceCity ?? null,
+    studyAreas: person?.studyAreas ?? null,
+    documents: documents.map((doc) => ({
+      id: doc.id,
+      documentType: doc.documentType,
+      fileName: doc.fileName,
+      mimeType: doc.mimeType,
+      createdAt: doc.createdAt,
+    })),
   };
 }
 

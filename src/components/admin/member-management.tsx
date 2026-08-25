@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ExternalLink, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants";
 import { MEMBER_STATUSES, type MemberCategory } from "@/lib/member-types";
+import { DOCUMENT_TYPES } from "@/lib/application-shared";
 import { formatDate } from "@/lib/utils";
 
 export interface AdminMemberItem {
@@ -22,6 +30,7 @@ export interface AdminMemberItem {
   statusLabel: string;
   validUntil?: string | null;
   birthDate?: string | null;
+  cpf?: string | null;
   publicCity?: string | null;
   publicState?: string | null;
 }
@@ -50,6 +59,203 @@ function toDateInput(value?: string | null) {
   return value.slice(0, 10);
 }
 
+interface MemberDetail {
+  id: string;
+  userId: string;
+  email: string;
+  publicName: string;
+  fullName: string;
+  registrationNumber: string;
+  category: MemberCategory;
+  status: string;
+  validUntil?: string | null;
+  birthDate?: string | null;
+  publicCity?: string | null;
+  publicState?: string | null;
+  publicBio?: string | null;
+  isPublic?: boolean;
+  cpf?: string | null;
+  rg?: string | null;
+  nationality?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  addressNumber?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  profession?: string | null;
+  institution?: string | null;
+  practiceCity?: string | null;
+  studyAreas?: string | null;
+  documents?: {
+    id: string;
+    documentType: string;
+    fileName: string;
+    mimeType: string;
+    createdAt: string;
+  }[];
+}
+
+function documentLabel(type: string) {
+  return DOCUMENT_TYPES.find((d) => d.id === type)?.label ?? type;
+}
+
+function DetailRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-sm text-zinc-200">{value}</p>
+    </div>
+  );
+}
+
+function MemberDetailDialog({
+  open,
+  onOpenChange,
+  detail,
+  loading,
+  onOpenDocument,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  detail: MemberDetail | null;
+  loading: boolean;
+  onOpenDocument: (documentId: string) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto p-0">
+        <div className="p-6">
+          <DialogHeader className="gap-0 border-b border-white/10 pb-6 pr-10">
+            <DialogTitle className="truncate">
+              {detail?.fullName || detail?.publicName || "Associado"}
+            </DialogTitle>
+            {detail && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="outline">{detail.registrationNumber}</Badge>
+                <Badge variant="outline">
+                  {CATEGORY_LABELS[detail.category] ?? detail.category}
+                </Badge>
+                <Badge>
+                  {STATUS_LABELS[detail.status as keyof typeof STATUS_LABELS] ?? detail.status}
+                </Badge>
+                {detail.validUntil && (
+                  <Badge variant="outline">
+                    Válido até {formatDate(detail.validUntil)}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </DialogHeader>
+
+          {loading && (
+            <p className="mt-6 text-sm text-muted">Carregando dados do associado...</p>
+          )}
+
+          {detail && !loading && (
+            <div className="mt-6 space-y-6">
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-white">Dados pessoais</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailRow label="Nome completo" value={detail.fullName} />
+                  <DetailRow label="Nome público" value={detail.publicName} />
+                  <DetailRow label="E-mail" value={detail.email} />
+                  <DetailRow label="CPF" value={detail.cpf} />
+                  <DetailRow label="RG" value={detail.rg} />
+                  <DetailRow
+                    label="Nascimento"
+                    value={detail.birthDate ? formatDate(detail.birthDate) : null}
+                  />
+                  <DetailRow label="Nacionalidade" value={detail.nationality} />
+                  <DetailRow label="Telefone" value={detail.phone} />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-white">Endereço</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailRow label="Logradouro" value={detail.address} />
+                  <DetailRow label="Número" value={detail.addressNumber} />
+                  <DetailRow
+                    label="Cidade/UF"
+                    value={
+                      detail.city && detail.state
+                        ? `${detail.city} / ${detail.state}`
+                        : detail.city ?? detail.state
+                    }
+                  />
+                  <DetailRow label="CEP" value={detail.zipCode} />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-white">Dados profissionais</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailRow label="Profissão" value={detail.profession} />
+                  <DetailRow label="Instituição" value={detail.institution} />
+                  <DetailRow label="Cidade de atuação" value={detail.practiceCity} />
+                  <DetailRow label="Áreas de atuação" value={detail.studyAreas} />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-white">Perfil público</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DetailRow
+                    label="Cidade pública"
+                    value={detail.publicCity}
+                  />
+                  <DetailRow
+                    label="Estado público"
+                    value={detail.publicState}
+                  />
+                  <DetailRow label="Bio pública" value={detail.publicBio} />
+                  <DetailRow
+                    label="Visível na consulta pública"
+                    value={detail.isPublic ? "Sim" : "Não"}
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-white">Documentos</h3>
+                {!detail.documents || detail.documents.length === 0 ? (
+                  <p className="text-sm text-muted">Nenhum documento enviado.</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {detail.documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between gap-3 rounded-md border border-white/10 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-white">
+                            {documentLabel(doc.documentType)}
+                          </p>
+                          <p className="truncate text-xs text-muted">{doc.fileName}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onOpenDocument(doc.id)}
+                          className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Abrir
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function MemberManagement({
   members,
   loading,
@@ -60,8 +266,12 @@ export function MemberManagement({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EditForm | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [query, setQuery] = useState("");
   const [exportFormat, setExportFormat] = useState<"csv" | "xlsx">("csv");
   const [exporting, setExporting] = useState(false);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [viewDetail, setViewDetail] = useState<MemberDetail | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
   async function openEdit(memberId: string) {
     setError("");
@@ -88,6 +298,35 @@ export function MemberManagement({
       publicBio: member.publicBio ?? "",
       isPublic: member.isPublic ?? false,
     });
+  }
+
+  async function openView(memberId: string) {
+    setViewingId(memberId);
+    setViewDetail(null);
+    setViewLoading(true);
+    try {
+      const res = await fetch(`/api/admin/members/${memberId}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setViewDetail(data.member);
+      }
+    } finally {
+      setViewLoading(false);
+    }
+  }
+
+  async function openDocument(documentId: string) {
+    const res = await fetch(`/api/admin/documents/${documentId}`, {
+      credentials: "include",
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   async function runAction(memberId: string, payload: Record<string, unknown>) {
@@ -194,10 +433,22 @@ export function MemberManagement({
       setExporting(false);
     }
   }
-  const visibleMembers =
-    statusFilter === "all"
-      ? members
-      : members.filter((m) => m.status === statusFilter);
+  const visibleMembers = useMemo(() => {
+    const byStatus =
+      statusFilter === "all"
+        ? members
+        : members.filter((m) => m.status === statusFilter);
+    const q = query.trim().toLowerCase();
+    if (!q) return byStatus;
+    const qDigits = q.replace(/\D/g, "");
+    return byStatus.filter((m) => {
+      if (m.publicName?.toLowerCase().includes(q)) return true;
+      if (m.email?.toLowerCase().includes(q)) return true;
+      if (m.registrationNumber?.toLowerCase().includes(q)) return true;
+      if (m.cpf && qDigits && m.cpf.replace(/\D/g, "").includes(qDigits)) return true;
+      return false;
+    });
+  }, [members, statusFilter, query]);
 
   if (loading) {
     return <p className="text-muted">Carregando...</p>;
@@ -343,6 +594,25 @@ export function MemberManagement({
               </select>
             </div>
 
+            <div className="relative max-w-xs flex-1 min-w-[16rem]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nome, e-mail, registro ou CPF"
+                className="pl-9"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-0.5 text-xs text-muted hover:text-white"
+                >
+                  limpar
+                </button>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-2">
                 <Label htmlFor="export-format" className="block text-center">
@@ -415,6 +685,9 @@ export function MemberManagement({
                       </td>
                       <td className="py-3">
                         <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openView(member.id)}>
+                            Ver
+                          </Button>
                           <Button size="sm" variant="outline" onClick={() => openEdit(member.id)}>
                             Editar
                           </Button>
@@ -463,6 +736,19 @@ export function MemberManagement({
           )}
         </CardContent>
       </Card>
+
+      <MemberDetailDialog
+        open={viewingId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingId(null);
+            setViewDetail(null);
+          }
+        }}
+        detail={viewDetail}
+        loading={viewLoading}
+        onOpenDocument={openDocument}
+      />
     </div>
   );
 }

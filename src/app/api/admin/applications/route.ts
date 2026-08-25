@@ -18,6 +18,7 @@ import {
 import { requireStaffPermission, staffAuthErrorResponse } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { CATEGORY_LABELS } from "@/lib/constants";
+import { formatCpfForDisplay } from "@/lib/pii";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,9 @@ export async function GET(request: NextRequest) {
         a.user?.email ??
         "Candidato",
       candidateEmail: a.candidate?.email ?? a.user?.person?.email ?? a.user?.email ?? "",
+      cpf: formatCpfForDisplay(
+        (a.candidate ?? a.user?.person ?? null)?.cpfEncrypted ?? null
+      ),
       documentsCount: a.documents.length,
       currentStep: a.currentStep,
     })),
