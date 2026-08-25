@@ -21,6 +21,10 @@ const updateMemberSchema = z.object({
   publicState: z.string().nullable().optional(),
   publicBio: z.string().nullable().optional(),
   isPublic: z.boolean().optional(),
+  // Campos de cadastro editáveis apenas pela secretaria
+  cpf: z.string().nullable().optional(),
+  rg: z.string().nullable().optional(),
+  birthDate: z.string().nullable().optional(),
 });
 
 export async function GET(

@@ -6,7 +6,7 @@ import { CATEGORY_LABELS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/users";
 import { formatRegistrationNumber } from "@/lib/utils";
-import { formatCpfForDisplay, formatRgForDisplay } from "@/lib/pii";
+import { formatCpfForDisplay, formatRgForDisplay, prepareCpfForStorage, prepareRgForStorage } from "@/lib/pii";
 
 export interface AdminMemberItem {
   id: string;
@@ -146,6 +146,10 @@ export interface UpdateMemberInput {
   publicState?: string | null;
   publicBio?: string | null;
   isPublic?: boolean;
+  // Campos de cadastro editáveis apenas pela secretaria
+  cpf?: string | null;
+  rg?: string | null;
+  birthDate?: string | null;
 }
 
 export async function updateMemberDetails(memberId: string, input: UpdateMemberInput) {
@@ -164,21 +168,30 @@ export async function updateMemberDetails(memberId: string, input: UpdateMemberI
         : null;
 
   await prisma.$transaction(async (tx) => {
+    // Monta os dados de Person (cadastro) apenas quando houver campos para atualizar.
+    const personUpdate: Record<string, unknown> = {};
+    if (input.fullName) personUpdate.fullName = input.fullName;
+    if (input.email) personUpdate.email = input.email.toLowerCase().trim();
+    if (input.publicCity !== undefined) personUpdate.city = input.publicCity;
+    if (input.publicState !== undefined) personUpdate.state = input.publicState;
+    if (input.birthDate !== undefined) {
+      personUpdate.birthDate = input.birthDate ? new Date(input.birthDate) : null;
+    }
+    if (input.cpf !== undefined) {
+      const { cpfEncrypted, cpfHash } = prepareCpfForStorage(input.cpf);
+      personUpdate.cpfEncrypted = cpfEncrypted;
+      personUpdate.cpfHash = cpfHash;
+    }
+    if (input.rg !== undefined) {
+      personUpdate.rgEncrypted = prepareRgForStorage(input.rg).rgEncrypted;
+    }
+
     await tx.user.update({
       where: { id: member.userId },
       data: {
         ...(input.email ? { email: input.email.toLowerCase().trim() } : {}),
-        ...(input.fullName && member.user.person
-          ? {
-              person: {
-                update: {
-                  fullName: input.fullName,
-                  ...(input.email ? { email: input.email.toLowerCase().trim() } : {}),
-                  ...(input.publicCity !== undefined ? { city: input.publicCity } : {}),
-                  ...(input.publicState !== undefined ? { state: input.publicState } : {}),
-                },
-              },
-            }
+        ...(member.user.person && Object.keys(personUpdate).length > 0
+          ? { person: { update: personUpdate } }
           : {}),
       },
     });

@@ -52,6 +52,9 @@ interface EditForm {
   publicState: string;
   publicBio: string;
   isPublic: boolean;
+  cpf: string;
+  rg: string;
+  birthDate: string;
 }
 
 function toDateInput(value?: string | null) {
@@ -296,6 +299,9 @@ export function MemberManagement({
       publicState: member.publicState ?? "",
       publicBio: member.publicBio ?? "",
       isPublic: member.isPublic ?? false,
+      cpf: member.cpf ?? "",
+      rg: member.rg ?? "",
+      birthDate: toDateInput(member.birthDate),
     });
   }
 
@@ -399,6 +405,9 @@ export function MemberManagement({
       publicState: form.publicState || null,
       publicBio: form.publicBio || null,
       isPublic: form.isPublic,
+      cpf: form.cpf || null,
+      rg: form.rg || null,
+      birthDate: form.birthDate ? new Date(form.birthDate).toISOString() : null,
     });
 
     if (ok) {
@@ -528,6 +537,36 @@ export function MemberManagement({
                   maxLength={2}
                 />
               </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-primary">
+                  Dados de cadastro — edição restrita à secretaria
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input
+                  value={form.cpf}
+                  onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>RG</Label>
+                <Input
+                  value={form.rg}
+                  onChange={(e) => setForm({ ...form, rg: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data de nascimento</Label>
+                <Input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                />
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label>Bio pública</Label>
                 <textarea
