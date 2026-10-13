@@ -19,7 +19,7 @@ import {
   labelAttendingCourseType,
   labelAttendingInstitution,
 } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateUTC } from "@/lib/utils";
 
 export interface ApplicationListItem {
   id: string;
@@ -275,7 +275,7 @@ function ApplicationDetailDialog({
                 <DetailRow label="RG" value={detail.person?.rgEncrypted} />
                 <DetailRow
                   label="Nascimento"
-                  value={detail.person?.birthDate ? formatDate(detail.person.birthDate) : null}
+                  value={detail.person?.birthDate ? formatDateUTC(detail.person.birthDate) : null}
                 />
                 <DetailRow label="Nacionalidade" value={detail.person?.nationality} />
                 <DetailRow label="Telefone" value={detail.person?.phone} />

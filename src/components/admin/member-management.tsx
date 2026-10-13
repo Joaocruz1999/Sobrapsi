@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants";
 import { MEMBER_STATUSES, type MemberCategory } from "@/lib/member-types";
 import { DOCUMENT_TYPES } from "@/lib/application-shared";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateUTC } from "@/lib/utils";
 
 export interface AdminMemberItem {
   id: string;
@@ -167,7 +167,7 @@ function MemberDetailDialog({
                   <DetailRow label="RG" value={detail.rg} />
                   <DetailRow
                     label="Nascimento"
-                    value={detail.birthDate ? formatDate(detail.birthDate) : null}
+                    value={detail.birthDate ? formatDateUTC(detail.birthDate) : null}
                   />
                   <DetailRow label="Nacionalidade" value={detail.nationality} />
                   <DetailRow label="Telefone" value={detail.phone} />

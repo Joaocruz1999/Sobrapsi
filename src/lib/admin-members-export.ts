@@ -2,7 +2,7 @@ import "server-only";
 
 import ExcelJS from "exceljs";
 import type { AdminMemberItem } from "@/lib/admin-members";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateUTC } from "@/lib/utils";
 
 const HEADERS = [
   "Nome",
@@ -24,7 +24,7 @@ function memberRows(members: AdminMemberItem[]) {
     m.categoryLabel,
     m.statusLabel,
     formatDate(m.validUntil),
-    formatDate(m.birthDate),
+    formatDateUTC(m.birthDate),
     m.publicCity ?? "",
     m.publicState ?? "",
   ]);
