@@ -16,8 +16,13 @@ import {
   type AdminMemberItem,
 } from "@/components/admin/member-management";
 import { StaffManagement, type StaffAccount } from "@/components/admin/staff-management";
+import {
+  SupervisionPackageKanban,
+  type SupervisionPackageOrderItem,
+} from "@/components/admin/supervision-package-kanban";
 import { ADMIN_KANBAN_COLUMNS } from "@/lib/admin-kanban";
 import { PAYMENT_TYPE_LABELS } from "@/lib/payment-shared";
+import { SUPERVISION_PACKAGE_KANBAN_COLUMNS } from "@/lib/supervision-package-kanban";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle2 } from "lucide-react";
 
@@ -49,7 +54,20 @@ interface StaffUser {
   roleLabel: string;
 }
 
-type AdminTab = "applications" | "members" | "payments" | "blog" | "staff";
+type AdminTab =
+  | "applications"
+  | "supervisionPackages"
+  | "members"
+  | "payments"
+  | "blog"
+  | "staff";
+
+interface SupervisionPackageStats {
+  total: number;
+  draft: number;
+  received: number;
+  awaitingPayment: number;
+}
 
 interface AdminPaymentItem {
   id: string;
@@ -78,6 +96,9 @@ function paymentSuccessMessage(payment: AdminPaymentItem) {
   if (payment.type === "annual_fee") {
     return `Pagamento de ${name} confirmado com sucesso. A associação foi renovada.`;
   }
+  if (payment.type === "supervision_package") {
+    return `Pagamento de ${name} confirmado com sucesso. O pedido do grupo de supervisões foi marcado como pago.`;
+  }
   return `Pagamento de ${name} confirmado com sucesso.`;
 }
 
@@ -98,6 +119,12 @@ export function AdminPanel() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [applications, setApplications] = useState<ApplicationListItem[]>([]);
   const [appStats, setAppStats] = useState<ApplicationStats | null>(null);
+  const [supervisionOrders, setSupervisionOrders] = useState<
+    SupervisionPackageOrderItem[]
+  >([]);
+  const [supervisionStats, setSupervisionStats] =
+    useState<SupervisionPackageStats | null>(null);
+  const [supervisionStatusError, setSupervisionStatusError] = useState("");
   const [articles, setArticles] = useState<BlogArticleItem[]>([]);
   const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,6 +242,12 @@ export function AdminPanel() {
           const data = await res.json();
           setApplications(data.applications);
           setAppStats(data.stats);
+        }),
+        fetch("/api/admin/supervision-packages", fetchOpts).then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
+          setSupervisionOrders(data.orders ?? []);
+          setSupervisionStats(data.stats ?? null);
         }),
         fetch("/api/admin/payments", fetchOpts).then(async (res) => {
           if (!res.ok) return;
@@ -349,6 +382,41 @@ export function AdminPanel() {
     }
   }
 
+  async function handleSupervisionStatusChange(orderId: string, status: string) {
+    setSupervisionStatusError("");
+    setActionLoading(true);
+    const res = await fetch("/api/admin/supervision-packages", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, action: "update_status", status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setActionLoading(false);
+    if (res.ok) {
+      const updatedStatus = data.order?.status ?? status;
+      const column = SUPERVISION_PACKAGE_KANBAN_COLUMNS.find(
+        (c) => c.status === status
+      );
+      setSupervisionOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                status: updatedStatus,
+                statusLabel: column?.label ?? order.statusLabel,
+              }
+            : order
+        )
+      );
+      if (permissions) await loadAll(permissions, { silent: true });
+    } else {
+      setSupervisionStatusError(
+        data.error ?? "Não foi possível atualizar a etapa do grupo."
+      );
+    }
+  }
+
   function refreshData() {
     if (permissions) loadAll(permissions);
   }
@@ -412,6 +480,13 @@ export function AdminPanel() {
               onClick={() => setTab("applications")}
             >
               Candidaturas
+            </Button>
+            <Button
+              variant={tab === "supervisionPackages" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTab("supervisionPackages")}
+            >
+              Grupo supervisões
             </Button>
             <Button
               variant={tab === "members" ? "default" : "outline"}
@@ -486,6 +561,54 @@ export function AdminPanel() {
                   onAction={handleAction}
                   onStatusChange={handleStatusChange}
                   onGoToMembers={() => setTab("members")}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {tab === "supervisionPackages" && permissions?.secretariat && (
+        <>
+          {supervisionStats && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Rascunho", value: supervisionStats.draft },
+                { label: "Recebida", value: supervisionStats.received },
+                {
+                  label: "Aguardando pagamento",
+                  value: supervisionStats.awaitingPayment,
+                },
+                { label: "No funil", value: supervisionStats.total },
+              ].map((s) => (
+                <Card key={s.label} className="border-white/10 bg-zinc-900/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted">{s.label}</p>
+                    <p className="text-2xl font-bold">{s.value}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <Card className="border-white/10 bg-zinc-900/50">
+            <CardHeader>
+              <CardTitle>Kanban do grupo de supervisões</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {supervisionStatusError && (
+                <p className="mb-4 text-sm text-red-400">{supervisionStatusError}</p>
+              )}
+              {supervisionOrders.length === 0 && !loading ? (
+                <p className="text-muted">Nenhum pedido de grupo no funil.</p>
+              ) : (
+                <SupervisionPackageKanban
+                  orders={supervisionOrders}
+                  loading={loading}
+                  refreshing={refreshing}
+                  actionLoading={actionLoading}
+                  onRefresh={refreshData}
+                  onStatusChange={handleSupervisionStatusChange}
                 />
               )}
             </CardContent>

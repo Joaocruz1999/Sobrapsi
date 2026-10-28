@@ -20,6 +20,11 @@ import {
 } from "@/components/layout/sections";
 import { INSTITUTIONAL_DISCLAIMER, OFFERINGS } from "@/lib/constants";
 import { SITE_SHELL } from "@/lib/layout";
+import {
+  SUPERVISION_PACKAGE,
+  SUPERVISION_PACKAGE_GUEST_AMOUNT,
+  SUPERVISION_PACKAGE_MEMBER_AMOUNT,
+} from "@/lib/supervision-package-shared";
 import { cn } from "@/lib/utils";
 
 const iconMap = {
@@ -131,6 +136,41 @@ export default function HomePage() {
               />
             );
           })}
+        </div>
+      </Section>
+
+      {/* Grupo de supervisões */}
+      <Section variant="card">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <div>
+            <SectionHeader
+              title={SUPERVISION_PACKAGE.title}
+              subtitle={`${SUPERVISION_PACKAGE.sessions} supervisões psicanalíticas com ${SUPERVISION_PACKAGE.supervisor} (${SUPERVISION_PACKAGE.frequency}).`}
+            />
+            <p className="mb-4 text-muted leading-relaxed">
+              Um percurso de acompanhamento clínico em grupo para fortalecer a
+              escuta, a elaboração de casos e a formação continuada. Limitado a{" "}
+              {SUPERVISION_PACKAGE.maxParticipants} participantes. Associados
+              SOBRAPSI têm condições especiais de valor.
+            </p>
+            <p className="mb-6 text-sm text-zinc-400">
+              Associados: R$ {SUPERVISION_PACKAGE_MEMBER_AMOUNT} · Não associados: R${" "}
+              {SUPERVISION_PACKAGE_GUEST_AMOUNT}
+            </p>
+            <Button asChild>
+              <Link href="/grupo-supervisoes">Conhecer o grupo</Link>
+            </Button>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Formação continuada
+            </p>
+            <p className="mt-4 text-lg font-medium leading-relaxed text-white">
+              Supervisão clínica com {SUPERVISION_PACKAGE.supervisor}, em grupo de{" "}
+              {SUPERVISION_PACKAGE.sessions} encontros ({SUPERVISION_PACKAGE.frequency})
+              para aprofundar a prática psicanalítica.
+            </p>
+          </div>
         </div>
       </Section>
 

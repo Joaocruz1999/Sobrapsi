@@ -7,6 +7,7 @@ import { finalizeApplicationApproval } from "@/lib/applications";
 import { resolveAuditActorUserId } from "@/lib/audit";
 import { sendPaymentConfirmedEmail, sendRenewalConfirmedEmail } from "@/lib/email";
 import { renewMembership } from "@/lib/membership-status";
+import { getPurchaseSession } from "@/lib/purchase-auth";
 import {
   createCardCheckoutPreference,
   createMercadoPagoPayment,
@@ -155,6 +156,12 @@ export async function confirmPayment(
     await renewMembership(payment.memberId);
     await sendRenewalConfirmedEmail(email, name, payment.member?.registrationNumber ?? "");
   } else {
+    if (payment.type === "supervision_package") {
+      const { markSupervisionPackageOrderPaidByPaymentId } = await import(
+        "@/lib/admin-supervision-packages"
+      );
+      await markSupervisionPackageOrderPaidByPaymentId(paymentId);
+    }
     await sendPaymentConfirmedEmail(email, name, Number(payment.amount));
   }
 
@@ -199,6 +206,11 @@ export async function authorizePaymentAccess(paymentId: string) {
     return payment;
   }
 
+  const purchaseSession = await getPurchaseSession();
+  if (purchaseSession?.paymentId === payment.id) {
+    return payment;
+  }
+
   throw new Error("Não autorizado");
 }
 
@@ -214,17 +226,24 @@ export async function getPaymentCheckoutConfig(paymentId: string) {
     payment.application?.candidate?.email ??
     payment.user.email;
 
-  const cardOption = getCheckoutPricingOptions(payment.type).find((option) => option.method === "card");
-  const maxInterestFreeInstallments = cardOption
+  const amountOverride =
+    payment.type === "supervision_package" ? Number(payment.amount) : undefined;
+  const pricingOptions = getCheckoutPricingOptions(payment.type, amountOverride);
+  const cardOption = pricingOptions.find((option) => option.method === "card");
+  const allowedInstallments = cardOption?.installments ?? 1;
+  const interestFreeCap = cardOption
     ? await getMaxInterestFreeInstallments(cardOption.amount)
     : 1;
+  // Produtos à vista (ex.: grupo de supervisões) ficam em 1x mesmo se a conta MP
+  // oferecer mais parcelas sem juros.
+  const maxInterestFreeInstallments = Math.min(allowedInstallments, interestFreeCap);
   const preferenceId = cardOption
     ? await createCardCheckoutPreference({
         amount: cardOption.amount,
         description: getPaymentDescription(payment.type),
         externalReference: payment.id,
         payerEmail,
-        maxInstallments: Math.min(cardOption.installments ?? 1, maxInterestFreeInstallments),
+        maxInstallments: maxInterestFreeInstallments,
       })
     : undefined;
 
@@ -234,7 +253,7 @@ export async function getPaymentCheckoutConfig(paymentId: string) {
     paymentType: payment.type,
     payerEmail,
     description: getPaymentDescription(payment.type),
-    options: getCheckoutPricingOptions(payment.type),
+    options: pricingOptions,
     preferenceId,
     maxInterestFreeInstallments,
   };
@@ -254,7 +273,9 @@ export async function processMercadoPagoCheckout({
   cardBin,
 }: ProcessMercadoPagoInput) {
   const payment = await authorizePaymentAccess(paymentId);
-  const pricing = getCheckoutAmount(payment.type, pricingMethod);
+  const amountOverride =
+    payment.type === "supervision_package" ? Number(payment.amount) : undefined;
+  const pricing = getCheckoutAmount(payment.type, pricingMethod, amountOverride);
   const payerEmail =
     payment.user.person?.email ??
     payment.application?.candidate?.email ??
@@ -300,7 +321,21 @@ export async function processMercadoPagoCheckout({
       throw new Error("Informe o CPF do titular do cartão.");
     }
 
-    const installments = Number(formData.installments ?? pricing.installments ?? 1);
+    const maxAllowedInstallments = pricing.installments ?? 1;
+    const requestedInstallments = Number(formData.installments ?? maxAllowedInstallments);
+    if (
+      !Number.isFinite(requestedInstallments) ||
+      requestedInstallments < 1 ||
+      requestedInstallments > maxAllowedInstallments
+    ) {
+      throw new Error(
+        maxAllowedInstallments <= 1
+          ? "Este produto aceita apenas pagamento à vista no cartão."
+          : `Parcelamento disponível apenas até ${maxAllowedInstallments}x.`
+      );
+    }
+
+    const installments = requestedInstallments;
     body.installments = installments;
 
     if (installments > 1) {
@@ -332,7 +367,11 @@ export async function processMercadoPagoCheckout({
   }
 
   const differentialPricingId = getDifferentialPricingId();
-  if (differentialPricingId) {
+  if (
+    differentialPricingId &&
+    pricingMethod === "card" &&
+    (pricing.installments ?? 1) > 1
+  ) {
     body.differential_pricing_id = differentialPricingId;
   }
 

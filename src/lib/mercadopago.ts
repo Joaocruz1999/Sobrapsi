@@ -176,7 +176,9 @@ export async function createCardCheckoutPreference(input: {
     },
   };
 
-  if (differentialPricingId) {
+  // Differential pricing só faz sentido quando há parcelamento; em 1x (à vista)
+  // omitimos para o Brick não oferecer parcelas da conta MP.
+  if (differentialPricingId && input.maxInstallments > 1) {
     body.differential_pricing = { id: differentialPricingId };
   }
 

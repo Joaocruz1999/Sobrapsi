@@ -517,7 +517,8 @@ export function buildMercadoPagoBrickCustomization(input: {
           creditCard: "all" as const,
           debitCard: [] as const,
           maxInstallments: input.maxInstallments,
-          interestFreeInstallments: true,
+          // Sem parcelas sem juros no Brick quando o produto é só à vista (1x).
+          interestFreeInstallments: input.maxInstallments > 1,
         }
       : {
           ticket: "all" as const,

@@ -85,6 +85,14 @@ enum ContentStatus {
   archived
 }
 
+enum SupervisionPackageStatus {
+  draft
+  received
+  awaiting_payment
+  paid
+  cancelled
+}
+
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
@@ -107,6 +115,7 @@ model User {
   adminNotes        AdminNote[]
   contentPages      ContentPage[]
   articles          Article[]
+  supervisionPackageOrders SupervisionPackageOrder[]
 
   @@map("users")
 }
@@ -412,12 +421,37 @@ model Payment {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   member      Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
   application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  supervisionPackageOrder SupervisionPackageOrder?
 
   @@index([userId])
   @@index([memberId])
   @@index([status])
   @@index([applicationId])
   @@map("payments")
+}
+
+model SupervisionPackageOrder {
+  id            String                    @id @default(cuid())
+  userId        String                    @map("user_id")
+  memberId      String?                   @map("member_id")
+  paymentId     String?                   @unique @map("payment_id")
+  status        SupervisionPackageStatus  @default(draft)
+  claimsMember  Boolean                   @default(false) @map("claims_member")
+  isMemberPrice Boolean                   @default(false) @map("is_member_price")
+  amount        Decimal                   @db.Decimal(10, 2)
+  fullName      String                    @map("full_name")
+  phone         String?
+  submittedAt   DateTime?                 @map("submitted_at")
+  paidAt        DateTime?                 @map("paid_at")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("supervision_package_orders")
 }
 
 model AuditLog {

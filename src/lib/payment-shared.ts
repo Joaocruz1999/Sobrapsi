@@ -2,6 +2,7 @@ export const PAYMENT_TYPE_LABELS: Record<string, string> = {
   application_fee: "Taxa de candidatura",
   annual_fee: "Anuidade",
   renewal: "Renovação",
+  supervision_package: "Grupo de supervisões",
   event: "Evento",
   other: "Outro",
 };
