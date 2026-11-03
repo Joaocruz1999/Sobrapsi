@@ -187,15 +187,60 @@ export const BENEFITS = [
 ] as const;
 
 export const OFFERINGS = [
-  { title: "Associação institucional", icon: "users" },
-  { title: "Carteira de associado", icon: "id-card" },
-  { title: "Consulta pública de registro", icon: "search" },
-  { title: "Eventos científicos", icon: "calendar" },
-  { title: "Formação continuada", icon: "book-open" },
-  { title: "Rede de análise e supervisão", icon: "network" },
-  { title: "Orientação ética", icon: "scale" },
-  { title: "Conteúdos e publicações", icon: "file-text" },
-  { title: "Apoio profissional e institucional", icon: "handshake" },
+  {
+    title: "Associação institucional",
+    icon: "users",
+    description:
+      "Vínculo formal com uma sociedade psicanalítica associativa, científica e formativa, reconhecida por associados, instituições parceiras e pela comunidade profissional.",
+  },
+  {
+    title: "Carteira de associado",
+    icon: "id-card",
+    description:
+      "Identificação oficial de associado SOBRAPSI, emitida após aprovação da candidatura e disponível na área do associado, com renovação anual.",
+  },
+  {
+    title: "Consulta pública de registro",
+    icon: "search",
+    description:
+      "Verificação pública e segura, por nome ou número de registro, para que pacientes, clínicas e instituições confirmem se um profissional está ativo — sem exposição de dados sensíveis.",
+  },
+  {
+    title: "Eventos científicos",
+    icon: "calendar",
+    description:
+      "Congressos, palestras e encontros com especialistas da psicanálise, reunindo a comunidade associativa para debate e atualização.",
+  },
+  {
+    title: "Formação continuada",
+    icon: "book-open",
+    description:
+      "Cursos e seminários regulares para aprofundamento teórico-clínico, incluindo o acompanhamento do tripé psicanalítico (análise pessoal, supervisão e prática clínica).",
+  },
+  {
+    title: "Rede de análise e supervisão",
+    icon: "network",
+    description:
+      "Suporte a estudantes e associados vinculados a escolas parceiras, com espaço estruturado de supervisão clínica e análise em rede.",
+  },
+  {
+    title: "Orientação ética",
+    icon: "scale",
+    description:
+      "Acompanhamento pelo Conselho de Ética da SOBRAPSI, garantindo que a prática dos associados esteja alinhada aos princípios éticos da psicanálise.",
+  },
+  {
+    title: "Conteúdos e publicações",
+    icon: "file-text",
+    description:
+      "Artigos, textos de referência e produções da comunidade associativa, reunidos no blog institucional e em materiais de estudo.",
+  },
+  {
+    title: "Apoio profissional e institucional",
+    icon: "handshake",
+    description:
+      "Recursos e suporte institucional para associados ativos, fortalecendo a trajetória profissional e o vínculo com a sociedade.",
+  },
 ] as const;
 
 export const ANNUAL_FEE_CARD_AMOUNT = Number(process.env.ANNUAL_FEE_CARD_AMOUNT ?? "600");
@@ -217,6 +262,11 @@ export const APPLICATION_FEE_AMOUNT = APPLICATION_FEE_CARD_AMOUNT;
 
 export const ADMIN_NOTIFICATION_EMAIL =
   process.env.ADMIN_NOTIFICATION_EMAIL ?? "admin@sobrapsi.org.br";
+
+/** Convite do grupo WhatsApp da comunidade SOBRAPSI (associados). */
+export const COMMUNITY_WHATSAPP_URL =
+  process.env.COMMUNITY_WHATSAPP_URL ??
+  "https://chat.whatsapp.com/E409fnZi4ByAxcy8Tv7JFF";
 
 export const EXPIRY_WARNING_DAYS = 30;
 

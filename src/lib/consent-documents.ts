@@ -94,11 +94,11 @@ export const CONSENT_DOCUMENTS: Record<ConsentDocumentId, ConsentDocument> = {
     sections: [
       {
         title: "Categorias de associação",
-        body: "A SOBRAPSI contempla categorias como Associado Estudante, Psicanalista, Supervisor, Pesquisador, Institucional e Honorário, cada uma com requisitos e benefícios específicos.",
+        body: "A SOBRAPSI contempla as categorias Associado Estudante, Associado Psicanalista, Associado Supervisor, Associado Pesquisador, Associado Institucional e Associado Honorário, cada uma com requisitos e benefícios específicos. Associado Estudante e Associado Psicanalista são as principais vias de candidatura.",
       },
       {
         title: "Requisitos e documentos",
-        body: "A candidatura deve ser instruída com os documentos exigidos para a categoria solicitada, incluindo identificação, comprovantes de formação ou matrícula e demais itens definidos no processo vigente.",
+        body: "A candidatura deve ser instruída com os documentos exigidos para a categoria solicitada. Para Associado Estudante: identificação (RG/CPF), comprovante de endereço e comprovante de matrícula ativa. Para Associado Psicanalista: identificação (RG/CPF), comprovante de endereço, certificados e diploma de formação, e comprovação do tripé psicanalítico (análise pessoal, supervisão e prática clínica). As demais categorias seguem os itens definidos no processo vigente. A ausência de qualquer item pode atrasar ou impedir a análise.",
       },
       {
         title: "Processo de análise",

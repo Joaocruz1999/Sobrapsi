@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { COMMUNITY_WHATSAPP_URL } from "@/lib/constants";
 
 interface EmailOptions {
   to: string;
@@ -150,6 +151,9 @@ export async function sendMemberApprovedAccountEmail(
       </ul>
       <p><a href="${loginUrl}">Fazer login no portal</a></p>
       <p>Após o login, acesse sua área do associado para <strong>concluir o preenchimento do seu perfil público</strong>, revisar seus dados e acessar sua carteira digital.</p>
+      <p><strong>Comunidade SOBRAPSI</strong></p>
+      <p>Participe do nosso grupo no WhatsApp para acompanhar avisos e a vida associativa:</p>
+      <p><a href="${COMMUNITY_WHATSAPP_URL}">Entrar no grupo da comunidade</a></p>
       <p>Por segurança, no primeiro acesso você será solicitado a <strong>trocar sua senha</strong> por uma nova com no mínimo 8 caracteres, contendo letras e números.</p>
       <p>— SOBRAPSI</p>
     `,

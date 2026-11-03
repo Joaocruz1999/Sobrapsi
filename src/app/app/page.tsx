@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHero, Section } from "@/components/layout/sections";
-import { STATUS_LABELS } from "@/lib/constants";
+import { COMMUNITY_WHATSAPP_URL, STATUS_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
 interface PortalUser {
@@ -125,6 +125,15 @@ export default function AppDashboardPage() {
                   <Button variant="outline" size="sm" asChild>
                     <Link href="/app/renovacao">Renovação</Link>
                   </Button>
+                  <Button size="sm" asChild>
+                    <a
+                      href={COMMUNITY_WHATSAPP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Grupo da comunidade
+                    </a>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -178,6 +187,14 @@ export default function AppDashboardPage() {
                   <Link href="/app/renovacao" className="block text-sm text-primary hover:underline">
                     Pagamentos e renovação
                   </Link>
+                  <a
+                    href={COMMUNITY_WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-sm text-primary hover:underline"
+                  >
+                    Grupo da comunidade (WhatsApp)
+                  </a>
                 </>
               )}
               <Link href="/codigo-de-etica" className="block text-sm text-primary hover:underline">

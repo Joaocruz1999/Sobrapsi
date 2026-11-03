@@ -109,7 +109,7 @@ export default function HomePage() {
                   key={item.title}
                   icon={<Icon className="h-6 w-6" />}
                   title={item.title}
-                  description=""
+                  description={item.description}
                 />
               );
             })}
@@ -132,7 +132,7 @@ export default function HomePage() {
                 key={item.title}
                 icon={<Icon className="h-6 w-6" />}
                 title={item.title}
-                description="Recursos e suporte institucional para associados ativos."
+                description={item.description}
               />
             );
           })}

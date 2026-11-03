@@ -78,6 +78,7 @@ export default function AssocieSePage() {
       <Section>
         <SectionHeader
           title="Categorias de associação"
+          subtitle="A SOBRAPSI contempla seis categorias. Associado Estudante e Associado Psicanalista são as principais vias de candidatura, cada uma com requisitos e processo específicos."
           align="center"
         />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -95,6 +96,69 @@ export default function AssocieSePage() {
               </p>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section variant="card">
+        <SectionHeader title="Requisitos e documentos" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-black/30 p-6">
+            <h3 className="mb-3 text-lg font-bold text-white">Associado Estudante</h3>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-muted">
+              <li>Identificação (RG/CPF)</li>
+              <li>Comprovante de endereço</li>
+              <li>Comprovante de matrícula ativa</li>
+            </ul>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/30 p-6">
+            <h3 className="mb-3 text-lg font-bold text-white">Associado Psicanalista</h3>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-muted">
+              <li>Identificação (RG/CPF)</li>
+              <li>Comprovante de endereço</li>
+              <li>Certificados e diploma de formação</li>
+              <li>
+                Comprovação do tripé psicanalítico (análise pessoal, supervisão e
+                prática clínica)
+              </li>
+            </ul>
+          </div>
+        </div>
+        <p className="mt-6 max-w-3xl text-sm leading-relaxed text-muted">
+          A candidatura deve ser instruída com os documentos exigidos para a
+          categoria solicitada. A ausência de qualquer item pode atrasar ou
+          impedir a análise.
+        </p>
+      </Section>
+
+      <Section>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div>
+            <h3 className="mb-3 text-lg font-bold text-white">Processo de análise</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              Após o envio, a candidatura passa por análise documental, curricular
+              e institucional. A equipe responsável pode solicitar complementação
+              de informações ou documentos.
+            </p>
+          </div>
+          <div>
+            <h3 className="mb-3 text-lg font-bold text-white">Aprovação e reprovação</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              A aprovação não é automática e depende do atendimento aos critérios
+              institucionais. Em caso de reprovação, o candidato será informado
+              pelos canais oficiais, sem obrigação de motivação detalhada quando a
+              lei assim permitir.
+            </p>
+          </div>
+          <div>
+            <h3 className="mb-3 text-lg font-bold text-white">
+              Renovação, anuidade e deveres
+            </h3>
+            <p className="text-sm leading-relaxed text-muted">
+              A manutenção da associação está condicionada ao pagamento da
+              anuidade, à observância do Código de Ética, à atualização cadastral
+              e ao cumprimento das demais normas associativas.
+            </p>
+          </div>
         </div>
       </Section>
 
